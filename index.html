@@ -18,6 +18,16 @@
             transition: background-color 0.5s ease;
             zoom: 1.25;
         }
+
+        /* enlarge layout on desktop while keeping the aspect ratio */
+        @media screen and (min-width: 1024px) {
+            body {
+                transform: scale(1.25);
+                transform-origin: top left;
+                width: 80vw;
+                height: 80vh;
+            }
+        }
         .font-jua { font-family: 'Jua', sans-serif; }
 
         /* --- 입력창 및 관련 스타일 --- */
