@@ -478,6 +478,10 @@
         // =================================================================
         let dom = {};
 
+        // Canvas context for measuring text widths
+        const textMeasureCanvas = document.createElement('canvas');
+        const textMeasureCtx = textMeasureCanvas.getContext('2d');
+
         // =================================================================
         // --- 상태 (State) ---
         // =================================================================
@@ -935,11 +939,9 @@
 
         function updateInputWidth(input) {
             const computedStyle = window.getComputedStyle(input);
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            ctx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+            textMeasureCtx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
             const text = input.value || input.placeholder || " ";
-            const textMetrics = ctx.measureText(text);
+            const textMetrics = textMeasureCtx.measureText(text);
             const availableWidth = dom.questionContainer.clientWidth;
             const desiredWidth = textMetrics.width + config.INPUT_WIDTH_BUFFER;
             const newWidth = Math.max(config.INPUT_MIN_WIDTH, Math.min(desiredWidth, availableWidth - 4));
