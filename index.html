@@ -32,7 +32,7 @@
         .quiz-input.incorrect-1 { border-bottom: 2px solid #F97316; }
         .quiz-input.incorrect-2 { border-bottom: 2px solid #EF5350; color: #EF5350; }
         
-        #question-container { color: #E5E7EB; line-height: 2; text-align: left; font-size: 1.5rem; }
+        #question-container { color: #E5E7EB; line-height: 2; text-align: left; font-size: 2rem; }
 
         /* --- 애니메이션 및 효과 --- */
         @keyframes wobble { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
@@ -297,9 +297,9 @@
 
     <!-- 퀴즈 박스 -->
     <div id="quiz-box" class="w-full max-w-6xl bg-[#2d2d2d]/80 backdrop-blur-sm border border-white/50 rounded-2xl shadow-2xl p-8 sm:p-12 hidden relative">
-        <div id="category-display" class="text-left font-jua text-xl text-cyan-400 mb-4 pb-2 border-b-2 border-cyan-400/50"></div>
-        <div id="question-container" class="min-h-[100px] sm:min-h-[140px]"></div>
-        <button id="next-btn" class="font-jua text-xl sm:text-2xl bg-[#42A5F5] text-black px-8 py-3 rounded-full mt-8 transition-all duration-200 hover:scale-110 active:scale-95 hidden">Enter</button>
+        <div id="category-display" class="text-left font-jua text-2xl text-cyan-400 mb-4 pb-2 border-b-2 border-cyan-400/50"></div>
+        <div id="question-container" class="min-h-[130px] sm:min-h-[180px]"></div>
+        <button id="next-btn" class="font-jua text-2xl sm:text-3xl bg-[#42A5F5] text-black px-8 py-3 rounded-full mt-8 transition-all duration-200 hover:scale-110 active:scale-95 hidden">Enter</button>
     </div>
 
     <!-- 캐릭터 -->
@@ -315,7 +315,7 @@
 
     <!-- 시작/완료/오답노트 오버레이 -->
     <div id="start-screen" class="absolute inset-0 bg-black/80 flex flex-col justify-center items-center z-10 text-center p-4 overflow-y-auto">
-        <div class="w-full max-w-6xl">
+        <div class="w-full max-w-4xl">
             <!-- Step 1: Mode Selection -->
             <div id="step-1-mode-selection">
                 <h1 class="font-jua text-5xl sm:text-7xl mb-2">2022 개정 교육과정</h1>
