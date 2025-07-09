@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2022 개정 교육과정 암기 퀴즈</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #121212;
+            color: white;
+            overflow: hidden;
+            transition: background-color 0.5s ease;
+        }
+        .font-jua { font-family: 'Jua', sans-serif; }
+
+        /* --- 입력창 및 관련 스타일 --- */
+        .input-wrapper { display: inline-block; position: relative; vertical-align: bottom; margin: 0 0.25rem; }
+        .quiz-input {
+            background: transparent; border: none; border-bottom: 2px solid #4B5563;
+            color: #E5E7EB; text-align: center; font-size: 1.25em; line-height: 1.5;
+            padding: 4px 8px; min-width: 80px; transition: all 0.3s ease;
+        }
+        .quiz-input:focus { outline: none; border-bottom: 2px solid #42A5F5; }
+        .quiz-input.correct { border-bottom: 2px solid #66BB6A; color: #66BB6A; }
+        .quiz-input.incorrect-1 { border-bottom: 2px solid #F97316; }
+        .quiz-input.incorrect-2 { border-bottom: 2px solid #EF5350; color: #EF5350; }
+        
+        #question-container { color: #E5E7EB; line-height: 2; text-align: left; font-size: 1.5rem; }
+
+        /* --- 애니메이션 및 효과 --- */
+        @keyframes wobble { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+        .wobble { animation: wobble 0.3s ease-in-out; }
+        
+        @keyframes score-up { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-30px) scale(1.5); opacity: 0; } }
+        .score-up-animation { position: absolute; font-weight: bold; animation: score-up 0.8s ease-out; pointer-events: none; }
+
+        @keyframes perfect-pop { 0% { transform: scale(0.5); opacity: 0; } 60% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes perfect-fade-out { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+        .perfect-message {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-family: 'Jua', sans-serif; font-size: 4rem; color: #42A5F5;
+            text-shadow: 0 0 10px #000; pointer-events: none;
+            animation: perfect-pop 0.5s ease-out forwards;
+        }
+        .perfect-message.fade-out { animation: perfect-fade-out 0.5s ease-in forwards; }
+
+        .particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; z-index: 20; }
+
+        /* --- 캐릭터 --- */
+        .character-body {
+            width: 112px; height: 112px; background: #42A5F5; border-radius: 50%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            gap: 4px; position: relative; transition: all 0.3s ease-in-out;
+        }
+        .character-body.level-2 { transform: scale(1.1); background-color: #64B5F6; box-shadow: 0 0 15px #64B5F6; }
+        .character-body.level-3 { transform: scale(1.2); background-color: #1E88E5; box-shadow: 0 0 25px #1E88E5; }
+
+        @keyframes idle-bounce { 0%, 100% { transform: translateY(0) scale(var(--scale, 1)); } 50% { transform: translateY(-5px) scale(var(--scale, 1)); } }
+        .idle { animation: idle-bounce 1.5s ease-in-out infinite; }
+        
+        .eye-row { display: flex; gap: 8px; }
+        .eye {
+            width: 30px; height: 40px; background: white; border-radius: 50%;
+            position: relative; border: 2px solid #1a1a1a; overflow: hidden; transition: all 0.2s ease;
+        }
+        .eye.idle-eyes { height: 5px; top: 18px; }
+        .pupil {
+            width: 12px; height: 12px; background: #1a1a1a; border-radius: 50%;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+        .mouth {
+            width: 20px; height: 3px; background-color: #1a1a1a; border-radius: 2px; transition: all 0.2s ease;
+        }
+        .mouth.happy { height: 10px; width: 25px; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; border-top-left-radius: 0; border-top-right-radius: 0; background-color: #1a1a1a; transform: translateY(-3px); }
+        .mouth.worried { height: 10px; width: 25px; border-top-left-radius: 15px; border-top-right-radius: 15px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; background-color: #1a1a1a; transform: translateY(3px); }
+        .mouth.sad { height: 10px; width: 25px; border-top-left-radius: 15px; border-top-right-radius: 15px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; background-color: #1a1a1a; transform: translateY(5px); }
+        
+        /* --- 지식 지도 & 오답 노트 --- */
+        .map-section, .incorrect-note-section {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 1rem;
+        }
+        .map-title {
+            font-family: 'Jua', sans-serif;
+            font-size: 1.5rem;
+            color: #9ca3af;
+            border-bottom: 2px solid #4b5563;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .map-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 1rem;
+        }
+        .star-container {
+            display: flex; flex-direction: column; align-items: center;
+            cursor: pointer; transition: transform 0.2s;
+        }
+        .star-container:hover { transform: scale(1.1); }
+        .knowledge-icon-svg {
+            width: 3rem;
+            height: 3rem;
+            transition: all 0.3s;
+        }
+        .knowledge-icon-svg.unlocked path { fill: #6b7280; }
+        .knowledge-icon-svg.completed path { fill: #3b82f6; filter: drop-shadow(0 0 6px #3b82f6); }
+        .knowledge-icon-svg.perfect path { fill: #facc15; filter: drop-shadow(0 0 10px #facc15); }
+
+        .star-label { font-size: 0.8rem; text-align: center; margin-top: 0.5rem; color: #d1d5db; word-break: keep-all; }
+        
+        .incorrect-item {
+            background-color: #2d2d2d;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid #ef5350;
+        }
+        .incorrect-item-category {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+        }
+        .incorrect-item-question {
+            color: #e5e7eb;
+        }
+
+        /* --- 모드 선택 버튼 --- */
+        .mode-btn {
+            background-color: #4b5563;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .mode-btn:disabled {
+            background-color: #374151;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        .mode-btn.selected {
+            background-color: #42A5F5;
+            color: #121212;
+            transform: scale(1.05);
+        }
+
+        /* --- 룰렛 스타일 --- */
+        #roulette-screen {
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(5px);
+        }
+        #slot-machine {
+            position: relative;
+            background: linear-gradient(to bottom, #333, #111);
+            border-radius: 20px;
+            border: 5px solid #555;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.7), 0 0 20px rgba(255,215,0,0.5);
+            padding: 2rem;
+        }
+        .reels-container {
+            display: flex;
+            justify-content: center;
+            background: #222;
+            border: 3px solid #111;
+            border-radius: 10px;
+            padding: 1rem;
+            overflow: hidden;
+            position: relative;
+        }
+        .reels-container::before, .reels-container::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: linear-gradient(to bottom, rgba(34,34,34,1) 0%, rgba(34,34,34,0) 100%);
+            z-index: 5;
+        }
+        .reels-container::before {
+            top: 0;
+        }
+        .reels-container::after {
+            bottom: 0;
+            background: linear-gradient(to top, rgba(34,34,34,1) 0%, rgba(34,34,34,0) 100%);
+        }
+        .reel {
+            width: 250px;
+            height: 120px;
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+         .reel::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: -10px;
+            right: -10px;
+            height: 4px;
+            background: #ffcc00;
+            transform: translateY(-50%);
+            box-shadow: 0 0 10px #ffcc00;
+            z-index: 10;
+        }
+        .reel-strip {
+            transition: transform 1.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .reel-item {
+            height: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Jua', sans-serif;
+            font-size: 2.25rem; /* 36px */
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            width: 100%;
+            flex-shrink: 0;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .reel-item.active {
+            transform: scale(1.15);
+            box-shadow: 0 0 25px gold, inset 0 0 10px rgba(255,255,255,0.5);
+            z-index: 10;
+        }
+
+        @keyframes flash {
+            0%, 100% { box-shadow: 0 0 20px 10px rgba(255, 223, 0, 0.7); }
+            50% { box-shadow: 0 0 30px 15px rgba(255, 255, 255, 1); }
+        }
+        #spin-btn.can-spin {
+            animation: flash 1.5s infinite;
+        }
+        
+        #review-toast {
+            transition: opacity 0.5s, transform 0.5s;
+        }
+
+        @keyframes jackpot-flash {
+            0% { background-color: rgba(255, 215, 0, 0); }
+            50% { background-color: rgba(255, 215, 0, 0.7); }
+            100% { background-color: rgba(255, 215, 0, 0); }
+        }
+        .jackpot-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: jackpot-flash 0.2s 5;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .jackpot-text {
+            font-family: 'Jua', sans-serif;
+            font-size: 10rem;
+            color: gold;
+            text-shadow: 0 0 20px white, 0 0 40px #ffc107;
+            animation: perfect-pop 1s ease-out;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto">
+    
+    <!-- 로딩 오버레이 -->
+    <div id="loading-screen" class="absolute inset-0 bg-black/90 flex flex-col justify-center items-center z-50">
+        <div class="font-jua text-3xl text-white animate-pulse">로딩 중...</div>
+    </div>
+
+    <!-- 상단 UI: 자산, 진행도 -->
+    <div id="game-ui" class="w-full max-w-4xl absolute top-0 left-1/2 -translate-x-1/2 p-4 sm:p-6 hidden">
+        <div class="flex justify-between items-center gap-4 sm:gap-8 relative">
+            <button id="home-btn" class="absolute left-0 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-white/10 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+            </button>
+            <div class="font-jua text-2xl sm:text-3xl text-yellow-400 min-w-[150px] text-center flex-1">자산: <span id="money">0원</span></div>
+            <div class="flex-grow h-4 bg-[#2d2d2d] rounded-full overflow-hidden border border-gray-500">
+                <div id="progress-bar" class="h-full bg-gradient-to-r from-blue-400 to-green-400 transition-all duration-500" style="width: 0%;"></div>
+            </div>
+            <div class="font-jua text-xl sm:text-2xl min-w-[80px] text-right"><span id="current-q">0</span> / <span id="total-q"></span></div>
+        </div>
+    </div>
+
+    <!-- 퀴즈 박스 -->
+    <div id="quiz-box" class="w-full max-w-4xl bg-[#2d2d2d]/80 backdrop-blur-sm border border-white/50 rounded-2xl shadow-2xl p-8 sm:p-12 hidden relative">
+        <div id="category-display" class="text-left font-jua text-xl text-cyan-400 mb-4 pb-2 border-b-2 border-cyan-400/50"></div>
+        <div id="question-container" class="min-h-[100px] sm:min-h-[140px]"></div>
+        <button id="next-btn" class="font-jua text-xl sm:text-2xl bg-[#42A5F5] text-black px-8 py-3 rounded-full mt-8 transition-all duration-200 hover:scale-110 active:scale-95 hidden">Enter</button>
+    </div>
+
+    <!-- 캐릭터 -->
+    <div class="fixed right-4 bottom-4 sm:right-8 sm:bottom-8 z-20">
+        <div id="character-body" class="character-body">
+            <div class="eye-row">
+                <div class="eye"><div class="pupil"></div></div>
+                <div class="eye"><div class="pupil"></div></div>
+            </div>
+            <div id="mouth" class="mouth"></div>
+        </div>
+    </div>
+
+    <!-- 시작/완료/오답노트 오버레이 -->
+    <div id="start-screen" class="absolute inset-0 bg-black/80 flex flex-col justify-center items-center z-10 text-center p-4 overflow-y-auto">
+        <div class="w-full max-w-4xl">
+            <!-- Step 1: Mode Selection -->
+            <div id="step-1-mode-selection">
+                <h1 class="font-jua text-5xl sm:text-7xl mb-2">2022 개정 교육과정</h1>
+                <p class="font-jua text-3xl sm:text-5xl mb-8 text-blue-400">학습 모드 선택</p>
+                <div class="flex justify-center items-center flex-wrap gap-4">
+                    <button id="select-mode-sequential" class="mode-btn font-jua text-3xl px-10 py-4 rounded-full" data-mode="sequential">순서대로</button>
+                    <button id="select-mode-random" class="mode-btn font-jua text-3xl px-10 py-4 rounded-full" data-mode="random">랜덤으로</button>
+                    <button id="select-mode-incorrect" class="mode-btn font-jua text-3xl px-10 py-4 rounded-full" data-mode="incorrect">오답노트</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Scope Selection -->
+            <div id="step-2-scope-selection" class="hidden">
+                 <button id="back-to-mode-selection" class="absolute top-4 left-4 font-jua text-xl bg-gray-600 px-4 py-2 rounded-full">&lt; 뒤로</button>
+                <!-- Sequential Mode UI -->
+                <div id="sequential-mode-ui" class="hidden">
+                    <h1 class="font-jua text-4xl sm:text-6xl mb-4">지식의 별을 밝혀라!</h1>
+                    <div id="knowledge-map">
+                        <div class="map-section">
+                            <h2 class="map-title">총론</h2>
+                            <div id="chongron-map" class="map-grid"></div>
+                        </div>
+                        <div class="map-section">
+                            <h2 class="map-title">창의적 체험활동</h2>
+                            <div id="changche-map" class="map-grid"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Random Mode UI -->
+                <div id="random-mode-ui" class="hidden">
+                    <h1 class="font-jua text-4xl sm:text-6xl mb-4">학습 범위 선택</h1>
+                     <div class="mt-6 w-full max-w-sm mx-auto">
+                        <select id="category-select" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-500 text-white text-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+                            <!-- 옵션은 JS로 채워집니다 -->
+                        </select>
+                    </div>
+                    <button id="start-btn" class="font-jua text-3xl sm:text-4xl bg-[#42A5F5] text-black px-12 py-4 mt-8 rounded-full transition-transform duration-200 hover:scale-110 active:scale-95">학습 시작!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="incorrect-note-screen" class="absolute inset-0 bg-black/80 hidden flex-col justify-center items-center z-10 text-center p-4">
+        <div class="w-full max-w-4xl h-full flex flex-col">
+            <button id="back-to-main-from-incorrect" class="absolute top-4 left-4 font-jua text-xl bg-gray-600 px-4 py-2 rounded-full">&lt; 뒤로</button>
+            <h1 class="font-jua text-4xl sm:text-6xl my-8">오답 노트</h1>
+            <div id="incorrect-list-container" class="flex-grow bg-black/30 rounded-lg p-4 overflow-y-auto mb-4">
+                <!-- 오답 목록이 여기에 채워집니다. -->
+            </div>
+            <div class="flex justify-center gap-4">
+                 <button id="start-incorrect-quiz-btn" class="font-jua text-2xl bg-blue-500 text-white px-8 py-3 rounded-full hover:bg-blue-600 transition-colors">오답 다시 풀기</button>
+                 <button id="clear-incorrect-notes-btn" class="font-jua text-2xl bg-red-600 text-white px-8 py-3 rounded-full hover:bg-red-700 transition-colors">전체 삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="end-screen" class="absolute inset-0 bg-black/80 hidden items-center justify-center z-10">
+        <div class="text-center p-4">
+            <h2 class="font-jua text-4xl sm:text-6xl mb-4">학습 완료!</h2>
+            <p class="font-jua text-3xl sm:text-5xl mb-2">최종 자산: <span id="final-money" class="text-yellow-400">0원</span></p>
+            <div class="flex gap-4 mt-8">
+                <button id="retry-btn" class="font-jua text-2xl sm:text-3xl bg-[#42A5F5] text-black px-10 py-4 rounded-full transition-transform duration-200 hover:scale-110 active:scale-95">다시 하기</button>
+                <button id="main-menu-btn" class="font-jua text-2xl sm:text-3xl bg-gray-500 text-white px-10 py-4 rounded-full transition-transform duration-200 hover:scale-110 active:scale-95">메인으로</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 룰렛 오버레이 -->
+    <div id="roulette-screen" class="absolute inset-0 justify-center items-center z-40 hidden">
+        <div class="flex flex-col items-center gap-8">
+            <h2 class="font-jua text-6xl text-yellow-300 text-center" style="text-shadow: 0 0 15px #facc15;">- CHANCE TIME -</h2>
+            <div id="slot-machine">
+                <div class="reels-container">
+                    <div class="reel"><div class="reel-strip" id="reel1"></div></div>
+                </div>
+            </div>
+            <button id="spin-btn" class="font-jua text-4xl bg-yellow-400 text-black px-12 py-4 rounded-full transition-transform duration-200 hover:scale-110 active:scale-95 shadow-lg">SPIN!</button>
+            <div id="roulette-result" class="font-jua text-4xl text-white h-12"></div>
+        </div>
+    </div>
+
+    <div id="review-toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg opacity-0 transform translate-y-10 transition-all duration-300">
+        오늘 복습할 문항이 없습니다!
+    </div>
+
+    <script>
+        // =================================================================
+        // --- 설정 (Configuration) ---
+        // =================================================================
+        const config = {
+            IDLE_TIME: 10000,
+            INPUT_MIN_WIDTH: 80,
+            INPUT_WIDTH_BUFFER: 16,
+            SOUND_THROTTLE_TIME: 50, // ms
+            ROULETTE_CHANCE: 0.20, // 20%
+        };
+
+        const STAR_SVG_TEMPLATE = `<svg class="knowledge-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z"/></svg>`;
+        const SPARKLE_SVG_TEMPLATE = `<svg class="knowledge-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L9.5 9.5L2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z"/></svg>`;
+        
+        // 전체 171개 문항 데이터
+        const allQuizzes = [
+            // 총론
+            { category: "총론 | 교육과정의 성격", questions: [ { qid: 1, question: "이 교육과정은 {0} 제23조제2항에 의거하여 고시한 것으로, 초·중등학교의 교육 목적을 달성하기 위해 초·중등학교에서 운영하여야 할 학교 교육과정의 {1} 기준을 {2} 수준에서 제시한 것이다. 이 교육과정 기준의 성격은 다음과 같다.", answers: ["초·중등교육법", "공통적이고 일반적인", "국가"], detailedCategory: "총론 > 교육과정의 성격" }, { qid: 2, question: "[가] 국가 수준의 {0}을 바탕으로 지역, 학교, 개인 수준의 {1}을 추구할 수 있도록 학교 교육과정의 기준과 내용에 관한 기본사항을 제시한다.", answers: ["공통성", "다양성"], detailedCategory: "총론 > 교육과정의 성격" }, { qid: 3, question: "[나] 학교 교육과정이 학생을 중심에 두고 {0}과 {1}, {2}의 신장 등 학습자 성장을 지원할 수 있도록 교육과정의 기준과 내용을 제시한다.", answers: ["주도성", "자율성", "창의성"], detailedCategory: "총론 > 교육과정의 성격" }, { qid: 4, question: "[다] 학교의 전반적인 교육 체제를 {0} 중심으로 운영할 수 있도록 교육과정의 기준과 내용을 제시한다.", answers: ["교육과정"], detailedCategory: "총론 > 교육과정의 성격" }, { qid: 5, question: "[라] 학교 교육과정이 추구하는 교육 목적의 실현을 위해 {0}와 {1}, {2}, {3}이 함께 협력적으로 참여하는 데 필요한 사항을 제시한다.", answers: ["학교", "시·도 교육청", "지역사회", "학생·학부모·교원"], detailedCategory: "총론 > 교육과정의 성격" }, { qid: 6, question: "[마] 학교 교육의 {0}을 {1}와 {2}, {3} 수준에서 관리하고 개선하기 위해 기반으로 삼아야 할 교육과정의 기준과 내용을 제시한다.", answers: ["질적 수준", "국가", "시·도 교육청", "학교"], detailedCategory: "총론 > 교육과정의 성격" } ] },
+            { category: "총론 | I. 교육과정 구성의 방향", questions: [ { qid: 7, question: "이에 그동안의 교육과정 발전 방향을 계승하면서 미래 사회를 살아갈 학생들이 {0}을 함양할 수 있도록 교육과정을 구성한다. 이 교육과정은 우리나라 교육과정이 추구해 온 교육 이념과 인간상을 바탕으로, 미래 사회가 요구하는 {1}을 함양하여 {2}으로 성장하게 하는 데 중점을 둔다. 이를 위한 교육과정 구성의 중점은 다음과 같다.", answers: ["주도적으로 삶을 이끌어가는 능력", "핵심역량", "포용성과 창의성을 갖춘 주도적인 사람"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 1. 교육과정 구성의 중점" }, { qid: 8, question: "[가] 디지털 전환, 기후·생태환경 변화 등에 따른 미래 사회의 불확실성에 {0}과 자신의 삶과 학습을 스스로 이끌어가는 {1}을 함양한다.", answers: ["능동적으로 대응할 수 있는 능력", "주도성"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 1. 교육과정 구성의 중점" }, { qid: 9, question: "[나] 학생 개개인의 인격적 성장을 지원하고, 사회 구성원 모두의 행복을 위해 서로 존중하고 배려하며 협력하는 {0}을 함양한다.", answers: ["공동체 의식"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 1. 교육과정 구성의 중점" }, { qid: 10, question: "[다] 모든 학생이 학습의 기초인 {0}을 갖출 수 있도록 하여 {1}에서 학습을 지속할 수 있게 한다.", answers: ["언어·수리·디지털 기초소양", "학교 교육과 평생 학습"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 1. 교육과정 구성의 중점" }, { qid: 11, question: "[라] 학생들이 자신의 {0}와 {1}을 주도적으로 설계하고, 적절한 시기에 학습할 수 있도록 {2} 체제를 구축한다.", answers: ["진로", "학습", "학습자 맞춤형 교육과정"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 1. 교육과정 구성의 중점" }, { qid: 12, question: "[마] 교과 교육에서 {0}을 통해 역량을 함양할 수 있도록 {1}, {2}, {3} 등을 강화한다.", answers: ["깊이 있는 학습", "교과 간 연계와 통합", "학생의 삶과 연계된 학습", "학습에 대한 성찰"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 1. 교육과정 구성의 중점" }, { qid: 13, question: "[바] {0} 수업을 활성화하고, 문제 해결 및 사고의 {1}를 통해 학습의 질을 개선한다.", answers: ["다양한 학생 참여형", "과정을 중시하는 평가"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 1. 교육과정 구성의 중점" }, { qid: 14, question: "[사] 교육과정 {0}를 기반으로 {1}, {2}, {3}, {4}, {5} 등 교육 주체들 간의 협조 체제를 구축하여 {6}에 적합한 학습이 이루어질 수 있도록 한다.", answers: ["자율화·분권화", "학교", "교사", "학부모", "시·도 교육청", "교육부", "학습자의 특성과 학교 여건"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 1. 교육과정 구성의 중점" }, { qid: 15, question: "우리나라의 교육은 {0}의 이념 아래 모든 국민으로 하여금 인격을 도야하고, 자주적 생활 능력과 민주시민으로서 필요한 자질을 갖추어 인간다운 삶을 영위하며, 민주 국가의 발전과 인류 공영의 이상을 실현할 수 있도록 함을 목적으로 한다. 이러한 교육 이념과 교육 목적을 바탕으로, 이 교육과정이 추구하는 인간상은 다음과 같다.", answers: ["홍익인간"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 2. 추구하는 인간상과 핵심역량" }, { qid: 16, question: "[가] 전인적 성장을 바탕으로 자아정체성을 확립하고 자신의 진로와 삶을 스스로 개척하는 {0} 사람.", answers: ["자기주도적인"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 2. 추구하는 인간상과 핵심역량" }, { qid: 17, question: "[나] 폭넓은 기초 능력을 바탕으로 진취적 발상과 도전을 통해 새로운 가치를 창출하는 {0} 사람.", answers: ["창의적인"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 2. 추구하는 인간상과 핵심역량" }, { qid: 18, question: "[다] 문화적 소양과 다원적 가치에 대한 이해를 바탕으로 인류 문화를 향유하고 발전시키는 {0} 사람.", answers: ["교양 있는"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 2. 추구하는 인간상과 핵심역량" }, { qid: 19, question: "[라] 공동체 의식을 바탕으로 다양성을 이해하고 서로 존중하며 세계와 소통하는 민주시민으로서 배려와 나눔, 협력을 실천하는 {0} 사람.", answers: ["더불어 사는"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 2. 추구하는 인간상과 핵심역량" }, { qid: 20, question: "[가] 자아정체성과 자신감을 가지고 자신의 삶과 진로를 스스로 설계하며 이에 필요한 기초 능력과 자질을 갖추어 자기주도적으로 살아갈 수 있는 {0} 역량.", answers: ["자기관리"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 2. 추구하는 인간상과 핵심역량" }, { qid: 21, question: "[나] 문제를 합리적으로 해결하기 위하여 다양한 영역의 지식과 정보를 깊이 있게 이해하고 비판적으로 탐구하며 활용할 수 있는 {0} 역량.", answers: ["지식정보처리"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 2. 추구하는 인간상과 핵심역량" }, { qid: 22, question: "[다] 폭넓은 기초 지식을 바탕으로 다양한 전문 분야의 지식, 기술, 경험을 융합적으로 활용하여 새로운 것을 창출하는 {0} 역량.", answers: ["창의적 사고"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 2. 추구하는 인간상과 핵심역량" }, { qid: 23, question: "[라] 인간에 대한 공감적 이해와 문화적 감수성을 바탕으로 삶의 의미와 가치를 성찰하고 향유하는 {0} 역량.", answers: ["심미적 감성"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 2. 추구하는 인간상과 핵심역량" }, { qid: 24, question: "[마] 다른 사람의 관점을 존중하고 경청하는 가운데 자신의 생각과 감정을 효과적으로 표현하며 상호협력적인 관계에서 공동의 목적을 구현하는 {0} 역량.", answers: ["협력적 소통"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 2. 추구하는 인간상과 핵심역량" }, { qid: 25, question: "[바] 지역·국가·세계 공동체의 구성원에게 요구되는 개방적·포용적 가치와 태도로 지속 가능한 인류 공동체 발전에 적극적이고 책임감 있게 참여하는 {0} 역량.", answers: ["공동체"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 2. 추구하는 인간상과 핵심역량" }, { qid: 26, question: "초등학교 교육은 학생의 일상생활과 학습에 필요한 {0} 및 {1}을 기르고 {2}을 함양하는 데 중점을 둔다.", answers: ["기본 습관", "기초 능력", "바른 인성"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 3. 학교급별 교육목표" }, { qid: 27, question: "1) 자신의 소중함을 알고 {0}을 기르며, {1}을 통해 자신의 꿈을 키운다.", answers: ["건강한 생활 습관", "풍부한 학습 경험"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 3. 학교급별 교육목표" }, { qid: 28, question: "2) 학습과 생활에서 문제를 발견하고 해결하는 {0}을 기르고, 이를 새롭게 경험할 수 있는 {1}을 키운다.", answers: ["기초 능력", "상상력"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 3. 학교급별 교육목표" }, { qid: 29, question: "3) 다양한 문화 활동을 즐기며 자연과 생활 속에서 {0}을 느낄 수 있는 {1}을 기른다.", answers: ["아름다움과 행복", "심성"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 3. 학교급별 교육목표" }, { qid: 30, question: "4) 일상생활과 학습에 필요한 {0}를 지키고 {1}를 기른다.", answers: ["규칙과 질서", "서로 돕고 배려하는 태도"], detailedCategory: "총론 > I. 교육과정 구성의 방향 > 3. 학교급별 교육목표" } ] },
+            { category: "총론 | II. 학교 교육과정 설계와 운영", questions: [ { qid: 31, question: "1) 학습자의 발달 수준에 적합한 {0} 교육과정을 통해 다양한 영역의 세계를 탐색해보는 기회를 제공하고, 학습자의 {1}인 성장·발달이 가능하도록 학교 교육과정을 설계하여 운영한다.", answers: ["폭넓고 균형 있는", "전인적"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 1. 설계의 원칙" }, { qid: 32, question: "2) {0}, {1}과 {2}, {3} 및 {4} 등 학교의 교육 여건과 환경을 종합적으로 고려하여 학습자에게 적합한 학습 경험을 제공한다.", answers: ["학생 실태와 요구", "교원 조직", "교육 시설·설비 등 학교 실태", "학부모 의견", "지역사회 실정"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 1. 설계의 원칙" }, { qid: 33, question: "3) 학교는 {0}에 따라 학교의 특성을 고려하여 다양한 교육 활동을 설계하여 운영할 수 있다.", answers: ["학생의 필요와 요구"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 1. 설계의 원칙" }, { qid: 34, question: "4) 학교 교육 기간을 포함한 평생 학습에 필요한 {0}과 {1}을 갖출 수 있도록 지원하며 학습 격차를 줄이도록 노력한다.", answers: ["기초소양", "자기주도 학습 능력"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 1. 설계의 원칙" }, { qid: 35, question: "5) 학생들의 자발적인 참여를 원칙으로 하여 학교와 시·도 교육청은 학생과 학부모의 요구에 따라 {0} 활동 또는 {1} 활동을 운영·지원할 수 있다.", answers: ["방과 후", "방학 중"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 1. 설계의 원칙" }, { qid: 36, question: "6) 학교는 학교 교육과정의 효율적인 설계와 운영을 위하여 {0}을 계획적으로 활용한다.", answers: ["지역사회의 인적, 물적 자원"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 1. 설계의 원칙" }, { qid: 37, question: "7) 학교는 {0}하여 학생이 건전한 생활 태도와 행동 양식을 가지고 학습할 수 있도록 지도한다.", answers: ["가정 및 지역과 연계"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 1. 설계의 원칙" }, { qid: 38, question: "나. 학교 교육과정은 {0}이 전문성을 발휘하여 참여하는 민주적인 절차와 과정을 거쳐 설계·운영하며, 지속적인 개선을 위해 노력한다.", answers: ["모든 교원"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 1. 설계의 원칙" }, { qid: 39, question: "1) {0}을 위해 교원, 교육 전문가, 학부모 등이 참여하는 {1}를 구성·운영하며, 이 위원회는 {2} 역할을 담당한다. 단, 특성화 고등학교와 산업수요 맞춤형 고등학교의 경우에는 산업계 전문가가 참여할 수 있고, 통합교육이 이루어지는 학교의 경우에는 {3}가 참여할 것을 권장한다.", answers: ["교육과정의 합리적 설계와 효율적 운영", "학교 교육과정 위원회", "학교장의 교육과정 운영 및 의사결정에 관한 자문", "특수교사"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 1. 설계의 원칙" }, { qid: 40, question: "2) 학교는 학습 공동체 문화를 조성하고 {0}, {1}, {2}, {3} 등을 통해서 교사들의 교육 활동 개선이 이루어질 수 있도록 한다.", answers: ["동학년 모임", "교과별 모임", "현장 연구", "자체 연수"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 1. 설계의 원칙" }, { qid: 41, question: "3) 학교는 학교 교육과정 설계·운영의 적절성과 효과성 등을 {0}하여 문제점과 개선점을 추출하고, 다음 학년도의 교육과정 설계·운영에 그 결과를 반영한다.", answers: ["자체 평가"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 1. 설계의 원칙" }, { qid: 42, question: "[가] 학교는 학생들이 {0}을 통해 {1}을 함양할 수 있도록 교수·학습을 설계하여 운영한다.", answers: ["깊이 있는 학습", "핵심역량"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 43, question: "1) {0}를 지양하고 각 교과목의 {1}를 중심으로 {2}의 내용 요소를 유기적으로 연계하며 학생의 발달 단계에 따라 학습 경험의 폭과 깊이를 확장할 수 있도록 수업을 설계한다.", answers: ["단편적 지식의 암기", "핵심 아이디어", "지식·이해", "과정·기능", "가치·태도"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 44, question: "2) {0}을 고려하여 수업을 설계하고 지도함으로써 학생들이 {1}으로 사고하고 창의적으로 문제를 해결하는 능력을 함양할 수 있도록 한다.", answers: ["교과 내 영역 간, 교과 간 내용 연계성", "융합적"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 45, question: "3) 학습 내용을 {0} 속에서 이해하고 적용하는 기회를 제공함으로써 학교에서의 학습이 학생의 {1} 경험이 되도록 한다.", answers: ["실생활 맥락", "삶에 의미 있는 학습"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 46, question: "4) 학생이 여러 교과의 고유한 탐구 방법을 익히고 자신의 {0}을 점검하며 개선하는 기회를 제공하여 스스로 탐구하고 학습할 수 있는 {1}을 함양할 수 있도록 한다.", answers: ["학습 과정과 학습 전략", "자기주도 학습 능력"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 47, question: "5) 교과의 깊이 있는 학습에 기반이 되는 {0}을 모든 교과를 통해 함양할 수 있도록 수업을 설계한다.", answers: ["언어·수리·디지털 기초소양"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 48, question: "[나] 학교는 학생들이 수업에 {0}하고 {1}을 경험할 수 있도록 교수·학습을 설계하여 운영한다.", answers: ["능동적으로 참여", "학습의 즐거움"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 49, question: "1) 학습 주제에서 다루는 탐구 질문에 관심과 호기심을 가지고 스스로 문제를 해결하는 {0}을 활성화하며, {1}을 통해 자신의 생각을 표현하는 기회를 가질 수 있도록 한다.", answers: ["학생 참여형 수업", "토의·토론 학습"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 50, question: "2) 실험, 실습, 관찰, 조사, 견학 등의 {0}이 충분히 이루어질 수 있도록 한다.", answers: ["체험 및 탐구 활동 경험"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 51, question: "3) {0}과 함께 {1}을 통하여 협력적으로 문제를 해결하는 경험을 충분히 갖도록 한다.", answers: ["개별 학습 활동", "소집단 협동 학습 활동"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 52, question: "[다] 교과의 특성과 학생의 {0}, {1}, {2}를 고려하여 학습 활동과 방법을 다양화하고, 학교의 여건과 학생의 특성에 따라 {3}을 구성하여 {4}을 활성화한다.", answers: ["능력", "적성", "진로", "다양한 학습 집단", "학생 맞춤형 수업"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 53, question: "1) 학생의 선행 경험, 선행 지식, 오개념 등 학습의 출발점을 파악하고 학생의 특성을 고려하여 {0}, {1}, {2}을 다양화한다.", answers: ["학습 소재", "자료", "활동"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 54, question: "2) {0}를 활용하여 교수·학습 방법을 다양화하고, 학생 맞춤형 학습을 위해 {1}을 활용할 수 있다.", answers: ["정보통신기술 매체", "지능정보기술"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 55, question: "3) 다문화 가정 배경, 가족 구성, 장애 유무 등 학습자의 개인적·사회문화적 배경의 {0}을 이해하고 존중하며, 이를 수업에 반영할 때 편견과 고정 관념, 차별을 야기하지 않도록 유의한다.", answers: ["다양성"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 56, question: "4) 학교는 학생 개개인의 학습 상황을 확인하여 학생의 {0}을 예방하도록 노력하며, {0}이 발생한 경우 {1}를 제공한다.", answers: ["학습 결손", "보충 학습 기회"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 57, question: "[라] 교사와 학생 간, 학생과 학생 간 {0}이 가능한 유연하고 안전한 교수·학습 환경을 지원하고, {1} 학습이 가능하도록 교육공간과 환경을 조성한다.", answers: ["상호 신뢰와 협력", "디지털 기반"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 58, question: "1) {0}에 맞는 다양한 학습이 이루어질 수 있도록 {1} 운영을 활성화하며, 고등학교는 학점 기반 교육과정 운영을 위해 유연한 학습공간을 활용한다.", answers: ["각 교과의 특성", "교과 교실"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 59, question: "2) 학교는 {0}이외에 {1}이나 {2} 등에서 개발한 다양한 교수·학습 자료를 활용할 수 있다.", answers: ["교과용 도서", "시·도 교육청", "학교"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 60, question: "3) 다양한 {0} 및 도구를 활용하여 효율적인 학습을 지원할 수 있도록 디지털 학습 환경을 구축한다.", answers: ["지능정보기술"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 61, question: "5) {0} 대상 학생 등 교육적 요구가 다양한 학생들을 위해 필요할 경우 의사소통 지원, 행동 지원, 보조공학 지원 등을 제공한다.", answers: ["특수교육"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 2. 교수·학습" }, { qid: 62, question: "[가] 평가는 학생 개개인의 {0} 정도를 확인하고, 학습의 부족한 부분을 보충하며, {1}을 개선하는 데 주안점을 둔다.", answers: ["교육 목표 도달", "교수·학습의 질"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 63, question: "1) 학교는 학생에게 평가 결과에 대한 적절한 정보를 제공하고 {0}를 실시하여 학생이 자신의 학습을 지속적으로 성찰하고 개선할 수 있도록 한다.", answers: ["추수 지도"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 64, question: "2) 학교와 교사는 학생 평가 결과를 활용하여 {0}을 지속적으로 개선한다.", answers: ["수업의 질"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 65, question: "[나] 학교와 교사는 {0}에 근거하여 교수·학습과 평가 활동이 {1} 있게 이루어지도록 한다.", answers: ["성취기준", "일관성"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 66, question: "1) {0}만이 아니라 결과에 이르기까지의 {1}을 확인하고 환류하여, 학습자의 성공적인 학습과 사고 능력 함양을 지원한다.", answers: ["학습의 결과", "학습 과정"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 67, question: "2) 학교는 학생의 {0} 측면에 대한 평가가 균형 있게 이루어질 수 있도록 하며, 학생이 자신의 학습 과정과 결과를 {1}할 수 있는 기회를 제공한다.", answers: ["인지적·정의적", "스스로 평가"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 68, question: "3) 학교는 교과목별 {0}과 {1}에 따라 성취수준을 설정하여 교수·학습 및 평가 계획에 반영한다.", answers: ["성취기준", "평가기준"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 69, question: "4) 학생에게 {0}은 평가하지 않는다.", answers: ["배울 기회를 주지 않은 내용과 기능"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 70, question: "1) {0}를 내실화하고 {1}과 {2} 평가의 비중을 확대한다.", answers: ["수행평가", "서술형", "논술형"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 71, question: "2) {0} 측면이나 {1}이 중시되는 평가에서는 교과목의 성격을 고려하여 타당하고 합리적인 기준과 척도를 마련하여 평가를 실시한다.", answers: ["정의적, 기능적", "실험·실습"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 72, question: "3) 학교의 여건과 교육활동의 특성을 고려하여 다양한 {0}을 활용함으로써 {1}를 활성화한다.", answers: ["지능정보기술", "학생 맞춤형 평가"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 73, question: "4) 개별 학생의 {0}을 고려하여 {1}을 조정할 수 있으며, 특수학급 및 일반학급에 재학하고 있는 특수교육 대상 학생을 위해 필요한 경우 {2}을 조정할 수 있다.", answers: ["발달 수준 및 특성", "평가 계획", "평가 방법"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 74, question: "5) 창의적 체험활동은 내용과 특성을 고려하여 평가의 주안점을 {0}에서 결정하여 평가한다.", answers: ["학교"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 3. 평가" }, { qid: 75, question: "[가] 교육 활동 전반을 통하여 남녀의 역할, 학력과 직업, 장애, 종교, 이전 거주지, 인종, 민족, 언어 등에 관한 {0}이나 {1}을 가지지 않도록 지도한다.", answers: ["고정 관념", "편견"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 4. 모든 학생을 위한 교육기회의 제공" }, { qid: 76, question: "[다] {0} 학생, 특정 분야에서 탁월한 재능을 보이는 학생, {1} 학생, 귀국 학생, {2} 학생 등이 학교에서 충실한 학습 경험을 누릴 수 있도록 필요한 지원을 한다.", answers: ["학습 부진", "특수교육 대상", "다문화 가정"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 4. 모든 학생을 위한 교육기회의 제공" }, { qid: 77, question: "[라] 특수교육 대상 학생을 위해 {0}을 설치·운영하는 경우, 학생의 장애 특성 및 정도를 고려하여, 이 교육과정을 조정하여 운영하거나 {1} 교과용 도서 및 {2}용 교수·학습 자료를 활용할 수 있다.", answers: ["특수학급", "특수교육", "통합교육"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 4. 모든 학생을 위한 교육기회의 제공" }, { qid: 78, question: "[마] 다문화 가정 학생을 위한 {0}을 설치·운영하는 경우, 다문화 가정 학생의 한국어 능력을 고려하여 이 교육과정을 조정하여 운영하거나, {1} 및 교수·학습 자료를 활용할 수 있다. {1}은 학교의 특성, 학생·교사·학부모의 요구와 필요에 따라 {2}시간 내외에서 운영할 수 있다.", answers: ["특별 학급", "한국어 교육과정", "주당 10"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 4. 모든 학생을 위한 교육기회의 제공" }, { qid: 79, question: "[바] 학교가 종교 과목을 개설할 때는 {0}로 과목을 편성하여 학생에게 선택의 기회를 주어야 한다. 다만, 학생의 학교 선택권이 허용되는 종립 학교의 경우 학생·학부모의 동의를 얻어 단수로 개설할 수 있다.", answers: ["종교 이외의 과목과 함께 복수"], detailedCategory: "총론 > II. 학교 교육과정 설계와 운영 > 4. 모든 학생을 위한 교육기회의 제공" } ] },
+            { category: "총론 | III. 학교급별 교육과정 편성·운영의 기준", questions: [ { qid: 80, question: "[가] 초등학교 1학년부터 중학교 3학년까지의 {0}과 고등학교 1학년부터 3학년까지의 학점 기반 선택 중심 교육과정으로 편성·운영한다.", answers: ["공통 교육과정"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 81, question: "[나] 학교는 {0}을 바탕으로 {1} 교육과정 및 {2} 교육과정을 편성할 수 있다.", answers: ["학교 교육과정 편성·운영 계획", "학년(군)별", "교과(군)별"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 82, question: "[다] {0}을 통해 학교 교육과정을 {1}할 수 있도록 학년군을 설정한다.", answers: ["학년 간 상호 연계와 협력", "유연하게 편성·운영"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 83, question: "[라] 공통 교육과정의 교과는 {0}, {1}, {2} 등을 고려하여 {3}로 재분류한다.", answers: ["교육 목적상의 근접성", "학문 탐구 대상 또는 방법상의 인접성", "생활양식에서의 연관성", "교과(군)"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 84, question: "[바] 교과와 창의적 체험활동의 내용 배열은 반드시 따라야 할 학습 순서를 의미하는 것은 아니며, {0}, {1}, {2} 등에 따라 각 교과목의 학년군별 목표 달성을 위해 {3}, {4} 등을 조정하여 운영할 수 있다.", answers: ["학생의 관심과 요구", "학교의 실정과 교사의 필요", "계절 및 지역의 특성", "지도 내용의 순서와 비중", "교과 내 또는 교과 간 연계 지도 방법"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 85, question: "[사] {0}하고 {1}이 이루어질 수 있도록 학기당 이수 교과목 수를 조정하여 {2}를 실시할 수 있다.", answers: ["학업 부담을 적정화", "의미 있는 학습 활동", "집중이수"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 86, question: "[아] 학교는 {0}이 {1}의 {2}을 준비하는 데 필요한 교육을 지원하기 위해 {3}을 운영할 수 있다.", answers: ["학교급 간 전환기의 학생들", "상급 학교", "생활 및 학습", "진로연계교육"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 87, question: "[자] {0}는 교과와 창의적 체험활동 등 교육 활동 전반에 걸쳐 {1}으로 다루도록 하고, {2}하여 지도한다.", answers: ["범교과 학습 주제", "통합적", "지역사회 및 가정과 연계"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 88, question: "[차] 학교는 가정과 학교, 사회에서의 위험 상황을 알고 대처할 수 있도록 {0} 중심의 {1}을 {2}과 연계하여 운영한다.", answers: ["체험", "안전교육", "관련 교과와 창의적 체험활동"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 89, question: "[카] 학교는 필요에 따라 {0}을 실시할 수 있으며, 이 경우 {0} 지침에 따른다.", answers: ["계기 교육"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 90, question: "[타] 학교는 필요에 따라 {0}을 실시할 수 있으며, 이 경우 {0} 운영 기준은 관련 법령과 지침에 따른다.", answers: ["원격수업"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 91, question: "[파] {0}는 필요에 따라 이 교육과정에 제시되어 있는 과목 외에 {1}할 수 있다. 이 경우 {2}이 정하는 지침에 따라 사전에 필요한 절차를 거쳐야 한다.", answers: ["시·도 교육청과 학교", "새로운 과목을 개설", "시·도 교육감"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 92, question: "[하] {0} 대상 학생에 대해서는 이 교육과정 해당 학년군의 편제와 시간(학점 배당)을 따르되, 학생의 교육적 요구를 고려하여 {0} 교육과정의 교과(군) 내용과 연계하거나 대체하여 수업을 설계·운영할 수 있다.", answers: ["특수교육"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 1. 기본 사항" }, { qid: 93, question: "가) 초등학교 교육과정은 {0}와 {1}으로 편성한다.", answers: ["교과(군)", "창의적 체험활동"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 94, question: "나) 교과(군)는 {0}로 한다. 다만, 1, 2학년의 교과는 {1}로 한다.", answers: ["국어, 사회/도덕, 수학, 과학/실과, 체육, 예술(음악/미술), 영어", "국어, 수학, 바른 생활, 슬기로운 생활, 즐거운 생활"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 95, question: "다) 창의적 체험활동은 {0}, {1}, {2}으로 한다.", answers: ["자율·자치 활동", "동아리 활동", "진로 활동"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 96, question: "2015 개정 교육과정과 비교하여 교과(군) 시수에 변화가 있는 학년군과 시수 변화가 있는 교과(군)는? -> {0}, {1}, {2}, {3}", answers: ["1~2학년군 국어(+34)", "바른 생활(+16)", "슬기로운 생활(+32)", "즐거운 생활(+16)"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 97, question: "① 1시간의 수업은 {0}을 원칙으로 하되, {1}, {2}, {3}, {4} 등을 고려하여 {5}으로 편성·운영할 수 있다.", answers: ["40분", "기후 및 계절", "학생의 발달 정도", "학습 내용의 성격", "학교 실정", "탄력적"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 98, question: "② 학년군의 교과(군)별 및 창의적 체험활동 시간 배당은 {0}를 기준으로 {1}의 {2}를 나타낸 것이다.", answers: ["연간 34주", "2년간", "기준 수업 시수"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 99, question: "③ 학년군별 총 수업 시간 수는 {0}를 나타낸 것이다.", answers: ["최소 수업 시수"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 100, question: "③ {0}는 최소 수업 시수를 나타낸 것이다.", answers: ["학년군별 총 수업 시간 수"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 101, question: "④ 실과의 수업 시간은 {0}의 수업 시수에만 포함된다.", answers: ["5~6학년 과학/실과"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 102, question: "⑤ 정보교육은 {0}의 정보영역 시수와 {1} 등을 활용하여 {2} 이상 편성·운영한다.", answers: ["실과", "학교자율시간", "34시간"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 103, question: "[1] 학교는 학년(군)별 교과(군)와 창의적 체험활동의 수업 시수를 {0}할 수 있다.", answers: ["학년별, 학기별로 자율적으로 편성"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 104, question: "나) 학교는 모든 교육 활동을 통해 학생이 {0}, {1}, {2}을 함양할 수 있도록 교육과정을 편성·운영한다.", answers: ["기본 생활 습관", "기초 학습 능력", "바른 인성"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 105, question: "다) 학교는 학교의 특성, 학생·교사·학부모의 요구 및 필요에 따라 자율적으로 {0}의 {1} 범위 내에서 시수를 증감하여 편성·운영할 수 있다. 단, {2}는 기준 수업 시수를 {3}하여 편성·운영할 수 없다.", answers: ["교과(군)별 및 창의적 체험활동", "20%", "체육, 예술(음악/미술) 교과", "감축"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 106, question: "라) 학교는 {0}를 높이기 위하여 필요한 경우 학년별, 학기별로 {1}를 실시할 수 있다.", answers: ["교육의 효과", "교과 집중이수"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 107, question: "마) 학교는 창의적 체험활동의 {0}을 학생들의 발달 수준, 학교의 여건 등을 고려하여 {1}으로 편성·운영한다.", answers: ["영역", "학년(군)별로 자율적"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 108, question: "가) 학교는 각 교과의 기초적, 기본적 요소들이 체계적으로 학습되도록 교육과정을 편성·운영한다. 특히 {0}과 {1}의 기초가 부족한 학생들을 대상으로 {2}을 위한 별도의 프로그램을 편성·운영할 수 있다.", answers: ["국어사용 능력", "수리 능력", "기초 학습 능력 향상"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 109, question: "나) {0}이 특정 교과를 이수하지 못할 경우, 시·도 교육청과 학교에서는 {1} 등을 통해 {2}이 발생하지 않도록 한다.", answers: ["전입 학생", "보충 학습 과정", "학습 결손"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 110, question: "다) 학년을 달리하는 학생을 대상으로 {0}을 편성·운영하는 경우에는 교육 내용의 {1}를 조정하거나 {2}를 중심으로 교재를 재구성하여 활용할 수 있다.", answers: ["복식 학급", "학년별 순서", "공통 주제"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 111, question: "[3] 학교는 {0}별로 지역과 연계하거나 다양하고 특색 있는 교육과정 운영을 위해 {1}을 편성·운영한다.", answers: ["3~6학년", "학교자율시간"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 112, question: "가) 학교자율시간을 활용하여 이 교육과정에 제시되어 있는 교과 외에 {0}을 개설할 수 있으며, 이 경우 시·도 교육감이 정하는 지침에 따라 사전에 필요한 절차를 거쳐야 한다.", answers: ["새로운 과목이나 활동"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 113, question: "나) 학교자율시간에 운영하는 과목과 활동의 내용은 지역과 학교의 여건 및 학생의 필요에 따라 {0}가 결정하되, 다양한 과목과 활동으로 개설하여 운영한다.", answers: ["학교"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 114, question: "다) 학교자율시간은 학교 여건에 따라 연간 34주를 기준으로 한 교과별 및 창의적 체험활동 수업 시간의 {0}의 수업 시간을 확보하여 운영한다.", answers: ["학기별 1주"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 115, question: "[4] 학교는 {0} 및 {1}하기 전 학기의 일부 시간을 활용하여 학교급 간 연계 및 진로 교육을 강화하는 {2}을 편성·운영한다.", answers: ["입학 초기", "상급 학교(학년)으로 진학", "진로연계교육"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 116, question: "가) 학교는 1학년 학생의 {0} 및 {1} 등의 {2}을 교과와 창의적 체험활동 시간을 활용하여 진로연계교육으로 운영한다.", answers: ["학교생활 적응", "한글 해득 교육", "입학 초기 적응 프로그램"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 117, question: "나) 학교는 {0} 및 {1}, {2} 등의 프로그램을 교과와 창의적 체험활동 시간을 활용하여 진로연계교육을 자율적으로 운영한다.", answers: ["중학교의 생활", "학습 준비", "진로 탐색"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 118, question: "다) 학교는 진로연계교육의 중점을 {0} 및 {1}에 두고, 교과별 학습 내용 및 학습 방법의 학교급 간 연계, 교과와 연계한 진로 활동 등을 통해 학생의 학습과 성장을 지원한다.", answers: ["학생의 역량 함양", "자기주도적 학습 능력 향상"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 119, question: "가) 학교는 1~2학년 학생에게 {0} 및 {1}를 충분히 제공한다.", answers: ["실내·외 놀이", "신체 활동의 기회"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 120, question: "나) 1~2학년의 안전교육은 바른 생활·슬기로운 생활·즐거운 생활 교과의 {0}을 포함하여 {1} 및 {2}을 활용하여 편성·운영한다.", answers: ["64시간", "교과", "창의적 체험활동"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 121, question: "다) {0}, {1}, {2} 등은 관련 교과와 창의적 체험활동 시간을 활용하여 체계적인 지도가 이루어질 수 있도록 한다.", answers: ["정보통신 활용 교육", "보건 교육", "한자 교육"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 2. 초등학교" }, { qid: 122, question: "[나] 국가가 설립 운영하는 학교의 교육과정은 해당 {0}의 편성·운영 지침을 참고하여 {1}이 편성한다.", answers: ["시·도 교육청", "학교장"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 5. 특수한 학교" }, { qid: 123, question: "[바] 자율학교, 재외한국학교 등 법령에 따라 교육과정 편성·운영의 자율성이 부여되는 학교와 특성화 중학교의 경우에는 학교의 설립 목적 및 특성에 따른 교육이 가능하도록 교육과정 편성·운영의 자율권을 부여하고, 이와 관련한 구체적인 사항은 {0}(재외한국학교의 경우 {1})이 정하는 지침에 따른다.", answers: ["시·도 교육감", "교육부 장관"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 5. 특수한 학교" }, { qid: 124, question: "[사] 효율적인 학교 운영을 위해 {0}하는 학교의 경우에는 이 교육과정을 따르되, 학교의 실정과 학생의 특성에 맞는 학교 교육과정을 운영할 수 있도록 교육과정 편성·운영의 자율권을 부여하고 이와 관련된 구체적인 사항은 {1}이 정하는 지침에 따른다.", answers: ["통합하여 운영", "시·도 교육감"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 5. 특수한 학교" }, { qid: 125, question: "[아] 교육과정의 연구 등을 위해 새로운 방식으로 교육과정을 편성·운영하고자 하는 학교는 {0}의 승인을 받아 이 교육과정의 기준과는 다르게 학교 교육과정을 편성·운영할 수 있다.", answers: ["교육부 장관"], detailedCategory: "총론 > III. 학교급별 교육과정 편성·운영의 기준 > 5. 특수한 학교" } ] },
+            { category: "총론 | IV. 학교 교육과정 지원", questions: [ { qid: 126, question: "이 교육과정의 질 관리를 위하여 주기적으로 {0}, {1}, {2}를 실시하고 그 결과를 교육과정 개선에 활용한다.", answers: ["학업 성취도 평가", "교육과정 편성·운영에 관한 평가", "학교와 교육 기관 평가"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 1. 교육과정의 질 관리" }, { qid: 127, question: "시·도의 특성과 교육적 요구를 구현하기 위하여 {0}를 조직하여 운영한다.", answers: ["시·도 교육청 교육과정 위원회"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 1. 교육과정의 질 관리" }, { qid: 128, question: "가) 이 위원회는 교육과정 편성·운영에 관한 {0}을 담당한다.", answers: ["조사 연구와 자문 기능"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 1. 교육과정의 질 관리" }, { qid: 129, question: "{0}를 위해 각급 학교의 교육과정 편성·운영 실태를 정기적으로 파악하고, 교육과정 운영 지원 실태를 점검하여 효과적인 교육과정 운영과 개선에 필요한 지원을 한다.", answers: ["학교 교육과정의 질 관리"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 1. 교육과정의 질 관리" }, { qid: 130, question: "가) 학교 교육과정 편성·운영 체제의 적절성 및 실효성을 높이기 위하여 {0}, {1} 등을 실시하고 그 결과를 교육과정 개선에 활용한다.", answers: ["학업 성취도 평가", "학교 교육과정 평가"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 1. 교육과정의 질 관리" }, { qid: 131, question: "나) 학교가 교과 교육과정의 목표에 부합되는 평가를 실시할 수 있도록 교과별로 {0}을 개발·보급한다.", answers: ["성취기준에 따른 평가기준"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 2. 학습자 맞춤교육 강화" }, { qid: 132, question: "다) 학교가 이 교육과정에 제시되어 있는 과목 외에 {0}할 수 있도록 관련 지침을 마련한다.", answers: ["새로운 과목을 개설·운영"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 2. 학습자 맞춤교육 강화" }, { qid: 133, question: "라) {0} 관련 규정 및 지침을 정비하고, {0}에 맞는 교육과정 운영이 이루어질 수 있도록 지원한다.", answers: ["통합운영학교"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 2. 학습자 맞춤교육 강화" }, { qid: 134, question: "마) 지역사회와 학교의 여건에 따라 초등학교 저학년 학생을 {0} 기능을 강화하고, 이에 대해 행·재정적 지원을 한다.", answers: ["학교에서 돌볼 수 있는"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 2. 학습자 맞춤교육 강화" }, { qid: 135, question: "바) {0} 시기 진로연계교육을 위한 자료를 개발·보급하고, 각 학교급 교육과정에 대한 교사의 이해 증진 및 학교급 간 협력 관계 구축을 위한 지원을 확대한다.", answers: ["학교급 전환"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 2. 학습자 맞춤교육 강화" }, { qid: 136, question: "사) {0} 및 {1} 함양을 위해 독서 활동을 활성화하도록 다양한 지원을 한다.", answers: ["인문학적 소양", "통합적 읽기 능력"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 2. 학습자 맞춤교육 강화" }, { qid: 137, question: "학습자의 다양성을 존중하고 학습 소외 및 교육 격차를 방지할 수 있도록 {0}을 지원한다.", answers: ["맞춤형 교육"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 2. 학습자 맞춤교육 강화" }, { qid: 138, question: "{0}를 바탕으로 교육 주체들이 각각의 역할과 책임을 충실하게 수행할 수 있는 협조 체제를 구축하고 지원한다.", answers: ["교육과정 자율화·분권화"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 3. 학교의 교육 환경 조성" }, { qid: 139, question: "디지털 교육 환경 변화에 부합하는 미래형 교수·학습 방법과 평가체제 구축을 위해 교원의 {0} 활용 역량 함양을 지원한다.", answers: ["에듀테크"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 3. 학교의 교육 환경 조성" }, { qid: 140, question: "가) 수준별 수업을 효율적으로 운영하도록 지원하며, 기초학력 향상과 학습 결손 보충이 가능하도록 {0}을 운영하는 데 필요한 행·재정적 지원을 한다.", answers: ["보충 수업"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 3. 학교의 교육 환경 조성" }, { qid: 141, question: "학교가 지역사회의 관계 기관과 적극적으로 연계·협력해서 교과, 창의적 체험활동, 학교스포츠클럽활동, 자유학기 등을 내실 있게 운영할 수 있도록 지원하며, 관내 학교가 활용할 수 있는 우수한 {0}을 발굴하여 안내한다.", answers: ["지역 자원"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 3. 학교의 교육 환경 조성" }, { qid: 142, question: "나) 학교 교육과정의 효율적인 편성·운영을 지원하기 위해 {0} 등 지원 기구를 운영하며 교육과정 편성·운영을 위한 각종 자료를 개발하여 보급한다.", answers: ["교육과정 컨설팅 지원단"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 3. 학교의 교육 환경 조성" }, { qid: 143, question: "온오프라인 연계를 통한 효과적인 교수·학습과 평가가 이루어질 수 있도록 하며, {0}을 활용한 맞춤형 수업과 평가가 가능하도록 지원한다.", answers: ["지능정보기술"], detailedCategory: "총론 > IV. 학교 교육과정 지원 > 3. 학교의 교육 환경 조성" } ] },
+            // 창의적 체험활동
+            { category: "창의적 체험활동 | 1. 성격 및 목표", questions: [ { qid: 144, question: "창의적 체험활동은 {0}와의 상호 보완적인 관계 속에서 학생의 {1}을 위하여 학교가 자율적으로 설계·운영할 수 있는 {2} 중심의 교육과정 영역이다.", answers: ["교과", "전인적인 성장", "경험과 실천"], detailedCategory: "창의적 체험활동 > 1. 성격 및 목표 > 가. 성격" }, { qid: 145, question: "창의적 체험활동은 초·중등학교 학생들이 자신의 삶과 연계된 다양한 활동에 참여함으로써 개인의 소질과 잠재력을 계발할 뿐만 아니라 {0}과 {1}을 지닌 민주시민으로서의 삶의 태도를 기르는 것을 목표로 한다.", answers: ["창의성", "포용성"], detailedCategory: "창의적 체험활동 > 1. 성격 및 목표 > 가. 성격" }, { qid: 146, question: "[첫째] 창의적 체험활동은 {0}을 위한 {1} 주도의 교육과정이다. 창의적 체험활동은 자율·자치활동, 동아리 활동, 진로 활동의 3개 영역으로 구성되며, 각 영역의 활동은 학생의 자기관리 역량, 지식정보처리 역량, 창의적 사고 역량, 심미적 감성 역량, 협력적 소통 역량, 공동체 역량의 증진을 도모한다.", answers: ["역량 함양", "학습자"], detailedCategory: "창의적 체험활동 > 1. 성격 및 목표 > 가. 성격" }, { qid: 147, question: "[둘째] 창의적 체험활동은 {0}, 학교급 간 및 학년 간, 그리고 영역 및 활동 간의 {1}을 추구한다. 학교는 학생의 발달 단계와 교육적 요구 등을 고려하여 학생 개인별 또는 집단별로 {2}으로 운영할 수 있다.", answers: ["교과와의 연계", "연계와 통합", "영역 및 활동을 선택하여 집중적"], detailedCategory: "창의적 체험활동 > 1. 성격 및 목표 > 가. 성격" }, { qid: 148, question: "[셋째] 창의적 체험활동은 학교급별 특성을 반영하여 설계한다. 학교는 학생의 흥미와 관심, 교육적 필요와 요구, 지역 사회의 특성 등을 고려하여 {0}에 중점을 두고 융통성 있게 설계할 수 있다. 학교는 학교급별 목표와 운영의 중점을 고려하고 학교의 {1}과 {2}을 반영하여 창의적 체험활동을 설계·운영한다.", answers: ["특정 영역과 활동", "자율성", "특수성"], detailedCategory: "창의적 체험활동 > 1. 성격 및 목표 > 가. 성격" }, { qid: 149, question: "[넷째] 학교는 창의적 체험활동 교육과정을 설계하고 운영함에 있어 {0}을 발휘한다. 창의적 체험활동의 설계 주체는 {1}, {2}, {3}이다. 창의적 체험활동에서는 교사와 학생이, 학생과 학생이 공동으로 계획을 수립하고 역할을 분담하여 실천한다. 이를 위해 국가 및 지역 수준에서는 학교와 지역의 특색을 고려하여 전문성을 갖춘 인적·물적 자원을 충분히 제공할 수 있는 기반을 마련한다.", answers: ["자율성", "학교", "교사", "학생"], detailedCategory: "창의적 체험활동 > 1. 성격 및 목표 > 가. 성격" }, { qid: 150, question: "창의적 체험활동은 학생들이 창의적인 다양한 활동에 주도적으로 참여함으로써 개인의 {0}을 계발·신장하여 창의적인 삶의 태도를 기르고 {1}을 함양하도록 하는 데 목표가 있다.", answers: ["소질과 잠재력", "공동체 의식"], detailedCategory: "창의적 체험활동 > 1. 성격 및 목표 > 나. 목표" }, { qid: 151, question: "(1) 초등학교에서는 자신의 {0}을 탐색하고 발견하여 공동체 생활에 필요한 {1}과 {2}을 기른다.", answers: ["개성과 소질", "기본 생활 습관", "시민의식"], detailedCategory: "창의적 체험활동 > 1. 성격 및 목표 > 나. 목표" } ] },
+            { category: "창의적 체험활동 | 2. 영역과 활동", questions: [ { qid: 152, question: "창의적 체험활동은 {0}, {1}, {2}의 세 영역으로 구성한다.", answers: ["자율·자치활동", "동아리 활동", "진로 활동"], detailedCategory: "창의적 체험활동 > 2. 영역과 활동 > 가. 영역" }, { qid: 153, question: "(1) 자율·자치활동 영역은 {0}으로 구성한다.", answers: ["자율활동과 자치활동"], detailedCategory: "창의적 체험활동 > 2. 영역과 활동 > 가. 영역" }, { qid: 154, question: "(2) 동아리 활동 영역은 {0}, {1}으로 구성한다.", answers: ["학술·문화 및 여가 활동", "봉사활동"], detailedCategory: "창의적 체험활동 > 2. 영역과 활동 > 가. 영역" }, { qid: 155, question: "(3) 진로 활동 영역은 {0}, {1}으로 구성한다", answers: ["진로 탐색 활동", "진로 설계 및 실천 활동"], detailedCategory: "창의적 체험활동 > 2. 영역과 활동 > 가. 영역" }, { qid: 156, question: "자율·자치활동은 학생의 {0}과 {1} 함양을 위해 이루어지는 영역으로 자율활동과 자치활동으로 구성된다. 자율·자치활동의 활동, 활동 목표와 예시 활동은 다음과 같으며, 학교에서는 이를 바탕으로 내용과 구체적인 활동을 창의적으로 설계할 수 있다. cf. 자율활동에는 {2}이 포함된다.", answers: ["자기주도성", "민주시민성", "입학 초기 적응 활동"], detailedCategory: "창의적 체험활동 > 2. 영역과 활동 > 나. 활동" }, { qid: 157, question: "동아리 활동은 학생의 {0}, {1}와 {2}에 부합하도록 동아리를 구성하거나 가입하여 다양한 체험을 하도록 하며, {3}를 실천함으로써 포용성과 시민성을 함양하는 데에 초점을 두는 영역으로 학술·문화 및 여가 활동, 봉사활동 등으로 구성된다. 동아리 활동 영역의 활동, 활동 목표, 예시 활동은 다음과 같으며, 학교에서는 이를 바탕으로 내용과 구체적인 활동을 창의적으로 설계할 수 있다.", answers: ["진로", "흥미", "적성", "나눔과 봉사"], detailedCategory: "창의적 체험활동 > 2. 영역과 활동 > 나. 활동" }, { qid: 158, question: "진로 활동은 학생이 {0}을 형성하고 자신의 흥미와 적성에 따른 {1}하도록 하기 위한 영역으로, 학생 자신과 직업 세계에 대한 이해를 바탕으로 적성에 맞는 진로를 탐색, 설계, 경험하기 위한 진로 탐색 활동, 진로 설계 및 실천 활동 등으로 구성된다. 진로 활동의 활동, 활동별 목표와 내용으로서의 예시 활동은 다음과 같으며, 학교에서는 이를 바탕으로 내용과 구체적인 활동을 창의적으로 설계할 수 있다.", answers: ["긍정적 자아 개념", "진로를 탐색 및 설계"], detailedCategory: "창의적 체험활동 > 2. 영역과 활동 > 나. 활동" } ] },
+            { category: "창의적 체험활동 | 3. 설계와 운영", questions: [ { qid: 159, question: "학교는 창의적 체험활동 교육과정 편성·운영 시 자율·자치활동, 동아리 활동, 진로 활동의 영역과 영역별 활동의 특성에 따라 {0}하거나 각 영역 및 활동을 {1}으로 설계할 수 있다.", answers: ["각각 운영", "연계·통합한 활동"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 160, question: "학교급별, 학년(군)별, 학기별로 학생의 특성과 요구에 따라 {0}으로 편성·운영하는 등 영역 및 활동의 편성에 있어 다양한 운영 방식으로 설계할 수 있다.", answers: ["일부 영역과 활동을 선택하여 집중적"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 161, question: "창의적 체험활동 교육과정 운영을 위한 시수 편성은 총론의 학교급별 교육과정 편성·운영 기준에 제시된 시간 배당 기준 등에 따른다. 초등학교와 중학교에서 학교는 자율적으로 교과(군)별 및 창의적 체험활동의 {0} 범위 내에서 시수를 증감하여 편성·운영할 수 있다.", answers: ["20%"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 162, question: "창의적 체험활동에 배당된 학교급별, 학년(군)별 시수를 {0}하여 편성하지 않도록 한다. 초등학교 1학년은 {1} 활동으로 입학 후 3월 중 {2}시간을 배정한다.", answers: ["특정 학년이나 학기에 편중", "입학 초기 적응", "34"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 163, question: "학교는 초등학교, 중학교, 고등학교의 입학 초기 및 상급 학교(학년)로 진학하기 전 학기의 일부 시간을 활용하여 학교급 간 전환 시기의 연계와 생활 적응을 지원하기 위해 {0}을 운영할 수 있다.", answers: ["진로 연계 교육"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 164, question: "교육적 필요에 따라 교과와의 {0}이 원활하게 이루어지도록 설계하되 {1}이 되지 않도록 한다.", answers: ["연계 및 통합", "교과 진도와 관련된 심화 보충형 학습"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 165, question: "{0}의 경우 관련 있는 교과 교육과정에서 우선하여 교육하고 필요시 창의적 체험활동에서 다루도록 한다.", answers: ["범교과 학습 주제"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 166, question: "{0}을 창의적 체험활동을 통해 실시할 경우, 강의식이나 지식 전달 위주의 수업 방식이 아닌 {1} 중심의 창의적 체험활동 교육과정 운영이 될 수 있도록 한다.", answers: ["계기 교육", "학생"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 167, question: "창의적 체험활동의 계획은 학생들의 {0}, {1}을 고려하여 수립하도록 한다.", answers: ["흥미와 소질", "학교와 지역의 실정"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 168, question: "학교는 창의적 체험활동의 운영 과정에서 안전에 유의하여야 한다. 교내외 체험활동에 앞서 반드시 체계적이고 실효성 있는 {0}을 실시하고, 관련 법령 및 상급기관의 안전 관련 지침을 따른다.", answers: ["안전교육"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 169, question: "창의적 체험활동 교육과정 설계의 주체는 {0}, {1}, {2}이다.", answers: ["학교", "교사", "학생"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 170, question: "창의적 체험활동의 활동 장소는 교내 시설 및 {0} 등을 이용할 수 있으며, 학부모를 포함한 {1}을 활용할 수 있다. 이때, 학교는 창의적 체험활동의 운영에 필요한 인적·물적 자원의 활용 등과 관련하여 교육청의 지원을 받을 수 있다. 또한, 학교의 상황과 교육적 필요 등을 종합적으로 고려하여 {2} 방식으로 운영이 가능하다.", answers: ["학교 밖 지역 사회 시설", "외부 인적 자원", "원격수업"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 171, question: "행사 활동의 시수 배정은 각 행사의 특성에 따라 {0} 및 {1}으로 편성한다.", answers: ["관련 교과", "창의적 체험활동의 영역별 활동"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 가. 설계의 원칙" }, { qid: 172, question: "초등학교의 창의적 체험활동은 학생들의 발달 수준, 학교의 여건 등을 종합적으로 고려하여 영역을 {0}으로 편성·운영할 수 있다. 유치원과 중학교와의 연계를 위해 초1 1학기, 초6 2학기에는 {1} 프로그램을 운영한다.", answers: ["선택적", "진로 연계 교육"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 나. 운영" }, { qid: 173, question: "초등학교 자율·자치활동은 일상생활에 필요한 질서와 예절을 익혀 {0}을 형성할 수 있도록 운영한다. 입학 초기에는 {1}의 적용 시기와 시수 및 활동 내용을 결정한다.", answers: ["기본 생활 습관", "입학 초기 적응 활동"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 나. 운영" }, { qid: 174, question: "초등학교 동아리 활동은 {0}를 깨닫는 학습 활동에 중점을 두고, 학생의 {1}, {2}, {3}과 관련된 활동을 탐색하여 선택하는 기회를 제공하고 적극적인 참여를 도모한다.", answers: ["봉사의 의미", "흥미", "특기", "적성"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 나. 운영" }, { qid: 175, question: "초등학교 진로 활동은 {0}, {1}, {2}, {3} 등을 위한 활동을 계획하여 운영할 수 있다.", answers: ["긍정적 자아 개념 형성", "진로 체험", "직업 세계의 탐색", "진로 기초 소양 함양"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 나. 운영" }, { qid: 176, question: "평가는 {0}, {1} 등을 활용하여 이루어진다.", answers: ["일화 기록법", "질문지"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 다. 평가" }, { qid: 177, question: "학생의 활동 실적, 성장의 정도, 행동의 변화, 특기 사항 등의 평가 결과를 {0}에 기록하며, 학생의 {1}의 계발을 돕는 자료로 활용한다.", answers: ["학교생활기록부", "소질과 잠재력"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 다. 평가" }, { qid: 178, question: "학교는 교육과정의 {0}를 위해 창의적 체험활동 교육과정을 평가하고, 그 결과를 이후 개선 자료로 활용한다.", answers: ["질 관리"], detailedCategory: "창의적 체험활동 > 3. 설계와 운영 > 다. 평가" } ] }
+        ];
+        
+        const sounds = {
+            coin: new Tone.Synth({
+                oscillator: { type: 'square' },
+                envelope: { attack: 0.005, decay: 0.2, sustain: 0, release: 0.2 },
+                volume: -15
+            }).toDestination(),
+            click: new Tone.MembraneSynth({
+                pitchDecay: 0.01,
+                octaves: 2,
+                oscillator: { type: "sine" },
+                envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 },
+                volume: -25
+            }).toDestination(),
+            incorrect1: new Tone.MonoSynth({
+                oscillator: { type: "square" },
+                envelope: { attack: 0.01, decay: 0.3, sustain: 0, release: 0.3 },
+                filterEnvelope: { attack: 0.01, decay: 0.1, sustain: 0, baseFrequency: 800, octaves: -1.5 },
+                volume: -15
+            }).toDestination(),
+            incorrect2: new Tone.NoiseSynth({
+                noise: { type: 'white' },
+                envelope: { attack: 0.005, decay: 0.15, sustain: 0 },
+                volume: -18
+            }).toDestination(),
+            type: new Tone.Synth({
+                oscillator: { type: 'square' },
+                envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.1 },
+                volume: -25
+            }).toDestination(),
+            perfect: new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "pulse", width: 0.4 },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.1 },
+                volume: -16
+            }).toDestination(),
+            rouletteClick: new Tone.NoiseSynth({
+                noise: { type: 'pink' },
+                envelope: { attack: 0.001, decay: 0.05, sustain: 0 },
+                volume: -22
+            }).toDestination(),
+            win: new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "triangle8" },
+                envelope: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.3 },
+                volume: -12
+            }).toDestination(),
+            jackpot: new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'fatsawtooth', count: 5, spread: 40 },
+                envelope: { attack: 0.01, decay: 1, sustain: 0.5, release: 1 },
+                volume: -8
+            }).toDestination()
+        };
+
+        // =================================================================
+        // --- DOM 요소 (DOM Elements) ---
+        // =================================================================
+        let dom = {};
+
+        // =================================================================
+        // --- 상태 (State) ---
+        // =================================================================
+        let state = {};
+
+        function resetQuizState() {
+             // 퀴즈 세션에만 해당하는 상태 초기화
+            state.currentQuizIndex = 0;
+            state.incorrectAttempts = {};
+            state.isQuestionPerfect = true;
+            state.questionPerfectStatus = {}; // 각 문제의 perfect 여부 기록
+            state.activeQuizzes = [];
+            state.selectedCategoryIndex = -1;
+            state.moneyMultiplier = state.moneyMultiplier || 1;
+            state.multiplierTurnsLeft = state.multiplierTurnsLeft || 0;
+            state.initialQuizCount = 0;
+            state.correctlyAnsweredCount = 0;
+            state.countedCorrectQIDs = new Set();
+            state.reviewScheduledQIDs = new Set();
+        }
+
+        function initializeGlobalState() {
+            // 브라우저 세션 전체에 걸쳐 유지되는 상태
+            state = {
+                gameMode: 'sequential',
+                money: 0, // 사이트 방문 시 자산 초기화
+                completionStatus: {}, // 방문 시마다 진행 상태 초기화
+                incorrectNotes: loadData('quizIncorrectNotes', []),
+                currentExpression: 'normal',
+                idleTimeout: null,
+                lastTypeSoundTime: 0,
+                activeInputValue: null,
+                ...state // 기존 상태 유지
+            };
+            saveData('money', 0);
+            localStorage.removeItem('quizProgress'); // 방문 시 진행 상태 초기화
+            resetQuizState(); // 퀴즈 관련 상태는 초기화
+        }
+
+
+        // =================================================================
+        // --- 데이터 관리 (Data Persistence) ---
+        // =================================================================
+        function loadData(key, defaultValue) {
+            const savedData = localStorage.getItem(key);
+            if (savedData === null) return defaultValue;
+            try {
+                return JSON.parse(savedData);
+            } catch (e) {
+                return defaultValue;
+            }
+        }
+
+        function saveData(key, value) {
+            localStorage.setItem(key, JSON.stringify(value));
+        }
+        
+        function addIncorrectNote(qid) {
+            const incorrectNotes = loadData('quizIncorrectNotes', []);
+            if (!incorrectNotes.includes(qid)) {
+                incorrectNotes.push(qid);
+                saveData('quizIncorrectNotes', incorrectNotes);
+            }
+        }
+
+        function removeIncorrectNote(qid) {
+            let incorrectNotes = loadData('quizIncorrectNotes', []);
+            incorrectNotes = incorrectNotes.filter(id => id !== qid);
+            saveData('quizIncorrectNotes', incorrectNotes);
+        }
+
+        function clearIncorrectNotes() {
+            saveData('quizIncorrectNotes', []);
+            renderIncorrectNoteList(); // UI 갱신
+        }
+
+
+        // =================================================================
+        // --- 게임 로직 (Game Logic) ---
+        // =================================================================
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        async function startQuiz(quizList, mode, categoryIndex = null) {
+            if (Tone.context.state !== 'running') { await Tone.start(); }
+            
+            if (state.idleTimeout) clearTimeout(state.idleTimeout);
+
+            resetQuizState();
+            state.gameMode = mode;
+            state.selectedCategoryIndex = categoryIndex;
+            
+            if (!quizList || quizList.length === 0) {
+                showToast("풀어볼 문제가 없습니다!");
+                return;
+            }
+            
+            state.activeQuizzes = [...quizList];
+            state.initialQuizCount = quizList.length;
+            state.lastQuizList = [...quizList]; 
+
+            if (state.gameMode === 'random' || state.gameMode === 'incorrect') {
+                shuffleArray(state.activeQuizzes);
+            }
+
+            updateMoneyUI();
+            
+            dom.startScreen.classList.add('hidden');
+            dom.incorrectNoteScreen.classList.add('hidden');
+            dom.incorrectNoteScreen.classList.remove('flex');
+            dom.endScreen.classList.add('hidden');
+            dom.endScreen.classList.remove('flex');
+            dom.gameUI.classList.remove('hidden');
+            dom.quizBox.classList.remove('hidden');
+            dom.nextBtn.classList.add('hidden');
+            dom.totalQ.textContent = state.initialQuizCount;
+            dom.currentQ.textContent = 0;
+            
+            setCharExpression('wave');
+            renderQuestion();
+        }
+        
+        function retryGame() {
+            startQuiz(state.lastQuizList, state.gameMode, state.selectedCategoryIndex);
+        }
+
+        function returnToMainMenu() {
+            if (state.idleTimeout) clearTimeout(state.idleTimeout);
+
+            dom.gameUI.classList.add('hidden');
+            dom.quizBox.classList.add('hidden');
+            dom.endScreen.classList.remove('flex');
+            dom.endScreen.classList.add('hidden');
+            dom.incorrectNoteScreen.classList.remove('flex');
+            dom.incorrectNoteScreen.classList.add('hidden');
+            dom.step2ScopeSelection.classList.add('hidden');
+            dom.step1ModeSelection.classList.remove('hidden');
+            dom.startScreen.classList.remove('hidden');
+            updateIncorrectNoteButton();
+        }
+
+        function nextQuestion() {
+            state.currentQuizIndex++;
+            if (state.currentQuizIndex < state.activeQuizzes.length) {
+                dom.nextBtn.classList.add('hidden');
+                dom.questionContainer.innerHTML = '';
+                renderQuestion();
+            } else {
+                showGameOver();
+            }
+        }
+
+        function showGameOver() {
+            if (state.idleTimeout) clearTimeout(state.idleTimeout);
+
+            if (state.gameMode === 'sequential' && state.selectedCategoryIndex !== null) {
+                const numericIndex = parseInt(state.selectedCategoryIndex);
+                const currentStatus = state.completionStatus[numericIndex] || 'unlocked';
+                
+                const allOriginalQuestions = state.lastQuizList;
+                const allOriginalQIDs = new Set(allOriginalQuestions.map(q => q.qid));
+                const allAnsweredCorrectly = [...allOriginalQIDs].every(qid => state.countedCorrectQIDs.has(qid));
+
+                if (allAnsweredCorrectly) {
+                     state.completionStatus[numericIndex] = 'perfect';
+                } else if (currentStatus !== 'perfect') {
+                    state.completionStatus[numericIndex] = 'completed';
+                }
+                saveData('quizProgress', state.completionStatus);
+                renderKnowledgeMap();
+                updateCharacterGrowth();
+            }
+            
+            dom.gameUI.classList.add('hidden');
+            dom.quizBox.classList.add('hidden');
+            dom.finalMoney.textContent = formatCurrency(state.money);
+            
+            dom.endScreen.classList.remove('hidden');
+            dom.endScreen.classList.add('flex');
+            
+            setCharExpression('celebrate');
+        }
+
+        // =================================================================
+        // --- UI 렌더링 (UI Rendering) ---
+        // =================================================================
+
+        function renderQuestion() {
+            state.isQuestionPerfect = true;
+            state.incorrectAttempts = {};
+            setCharExpression('normal');
+            
+            const quiz = state.activeQuizzes[state.currentQuizIndex];
+            let categoryText = quiz.detailedCategory;
+            if (quiz.isReview) {
+                categoryText = `<span class="text-red-400">[복습]</span> ${categoryText}`;
+            }
+            dom.categoryDisplay.innerHTML = categoryText;
+            
+            dom.questionContainer.classList.remove('text-2xl', 'sm:text-3xl', 'text-xl', 'sm:text-2xl', 'text-lg', 'sm:text-xl');
+            if (quiz.question.length > 200) { dom.questionContainer.classList.add('text-lg', 'sm:text-xl'); }
+            else if (quiz.question.length > 150) { dom.questionContainer.classList.add('text-xl', 'sm:text-2xl'); }
+            else { dom.questionContainer.classList.add('text-2xl', 'sm:text-3xl'); }
+
+            dom.questionContainer.innerHTML = '';
+
+            const parts = quiz.question.split(/(\{\d+\})/g).filter(p => p);
+            
+            parts.forEach(part => {
+                const match = part.match(/\{(\d+)\}/);
+                if (match) {
+                    const index = parseInt(match[1]);
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'input-wrapper';
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'quiz-input';
+                    input.id = `input-${index}`;
+                    input.dataset.answer = quiz.answers[index];
+                    input.autocomplete = 'off';
+                    input.spellcheck = false;
+                    wrapper.appendChild(input);
+                    dom.questionContainer.appendChild(wrapper);
+                } else if (part.trim() !== '') {
+                    const span = document.createElement('span');
+                    span.textContent = part;
+                    dom.questionContainer.appendChild(span);
+                }
+            });
+
+            const inputs = dom.questionContainer.querySelectorAll('.quiz-input');
+            inputs.forEach(input => {
+                input.addEventListener('input', handleInput);
+                input.addEventListener('keydown', handleEnterKey);
+                input.addEventListener('focus', handleFocus);
+                input.addEventListener('blur', handleBlur);
+                updateInputWidth(input);
+            });
+
+            if (inputs.length > 0) { inputs[0].focus(); }
+            resetIdleTimer();
+            updateProgressUI();
+        }
+        
+        // =================================================================
+        // --- 입력 및 정답 처리 (Input & Answer Handling) ---
+        // =================================================================
+        
+        function normalizeAnswer(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/\s|·|⋅|,/g, ''); // 공백, 쉼표, 모든 종류의 가운뎃점 제거
+        }
+
+        function handleInput(e) {
+            clearTimeout(state.idleTimeout);
+            const input = e.target;
+            updateInputWidth(input);
+
+            const normalizedAnswer = normalizeAnswer(input.dataset.answer);
+            const normalizedValue = normalizeAnswer(input.value);
+
+            if (normalizedAnswer.startsWith(normalizedValue)) {
+                setCharExpression('happy');
+                createParticle(input);
+                
+                const now = performance.now();
+                if (now - state.lastTypeSoundTime > config.SOUND_THROTTLE_TIME) {
+                    sounds.type.triggerAttackRelease('C5', '32n', Tone.now());
+                    state.lastTypeSoundTime = now;
+                }
+            } else {
+                input.classList.add('wobble');
+                setTimeout(() => input.classList.remove('wobble'), 300);
+            }
+            state.idleTimeout = setTimeout(() => setCharExpression('idle'), config.IDLE_TIME);
+        }
+        
+        function checkAnswerOnSubmit(input) {
+            if (input.disabled) return;
+            resetIdleTimer();
+            
+            const answer = input.dataset.answer;
+            const index = parseInt(input.id.split('-')[1]);
+            const normalizedUserValue = normalizeAnswer(input.value);
+            const normalizedAnswer = normalizeAnswer(answer);
+
+            if (normalizedUserValue === normalizedAnswer) {
+                 handleCorrectAnswer(input);
+            } else {
+                state.isQuestionPerfect = false;
+                
+                state.incorrectAttempts[index] = (state.incorrectAttempts[index] || 0) + 1;
+
+                if (state.incorrectAttempts[index] === 1) {
+                    setCharExpression('worried');
+                    sounds.incorrect1.triggerAttackRelease('G2', '8n', Tone.now());
+                    input.value = '';
+                    updateInputWidth(input);
+                    input.classList.add('incorrect-1', 'wobble');
+                    setTimeout(() => input.classList.remove('wobble'), 300);
+                } else {
+                    setCharExpression('sad');
+                    sounds.incorrect2.triggerAttackRelease('8n', Tone.now());
+                    input.classList.remove('incorrect-1');
+                    input.classList.add('incorrect-2');
+                    input.value = answer;
+                    updateInputWidth(input);
+                    input.disabled = true;
+
+                    focusNextInput(index);
+                }
+            }
+        }
+        
+        function handleCorrectAnswer(input) {
+            setCharExpression('happy');
+
+            sounds.coin.triggerAttackRelease('B5', '16n', Tone.now());
+            
+            const index = parseInt(input.id.split('-')[1]);
+            input.value = input.dataset.answer;
+            updateInputWidth(input);
+            input.classList.remove('incorrect-1', 'incorrect-2');
+            input.classList.add('correct');
+            input.disabled = true;
+
+            if (!state.incorrectAttempts[index] || state.incorrectAttempts[index] < 2) {
+                let earnings = Math.floor(Math.random() * 9001) + 1000; // 1,000 ~ 10,000
+                if (state.multiplierTurnsLeft > 0) {
+                    earnings *= state.moneyMultiplier;
+                }
+                
+                state.money += earnings;
+                saveData('money', state.money);
+                showMoneyUpAnimation(input, `+${formatCurrency(earnings)}`);
+                updateMoneyUI();
+            } else {
+                state.isQuestionPerfect = false;
+            }
+
+            const quiz = state.activeQuizzes[state.currentQuizIndex];
+            if (state.gameMode === 'incorrect' && state.isQuestionPerfect) {
+                 const allAnswered = Array.from(dom.questionContainer.querySelectorAll('.quiz-input')).every(i => i.classList.contains('correct'));
+                if (allAnswered) {
+                    removeIncorrectNote(quiz.qid);
+                }
+            }
+            
+            focusNextInput(index);
+        }
+
+        function checkAllAnswered() {
+            const allDisabled = Array.from(dom.questionContainer.querySelectorAll('.quiz-input')).every(i => i.disabled);
+            if (allDisabled) {
+                const quiz = state.activeQuizzes[state.currentQuizIndex];
+                
+                if (state.isQuestionPerfect) {
+                    state.questionPerfectStatus[state.currentQuizIndex] = true;
+                    if (!state.countedCorrectQIDs.has(quiz.qid)) {
+                        state.countedCorrectQIDs.add(quiz.qid);
+                    }
+                    state.correctlyAnsweredCount++;
+                    updateProgressUI();
+                    
+                    const perfectNotes = ['C5', 'E5', 'G5', 'C6'];
+                    sounds.perfect.triggerAttackRelease(perfectNotes, '8n', Tone.now());
+                    showPerfectMessage();
+
+                    if (Math.random() < config.ROULETTE_CHANCE) {
+                        setTimeout(showRoulette, 800);
+                    } else {
+                        setTimeout(() => {
+                            dom.nextBtn.classList.remove('hidden');
+                            dom.nextBtn.focus();
+                        }, 800);
+                    }
+                } else {
+                    state.questionPerfectStatus[state.currentQuizIndex] = false;
+
+                    const quiz = state.activeQuizzes[state.currentQuizIndex];
+                    if (!quiz.isReview) {
+                        addIncorrectNote(quiz.qid);
+                    }
+
+                    const reviewQuiz = { ...quiz, isReview: true };
+                    state.activeQuizzes.splice(state.currentQuizIndex + 3, 0, reviewQuiz);
+
+                    setTimeout(() => {
+                        dom.nextBtn.classList.remove('hidden');
+                        dom.nextBtn.focus();
+                    }, 800);
+                }
+            }
+        }
+
+        function handleEnterKey(e) {
+            if (e.key === 'Enter') {
+                if (!dom.rouletteScreen.classList.contains('hidden') && !dom.spinBtn.disabled) {
+                    spinRoulette();
+                } else if (!dom.nextBtn.classList.contains('hidden')) {
+                    nextQuestion();
+                } else if (document.activeElement.classList.contains('quiz-input')) {
+                    if (document.activeElement.value.trim() !== '') {
+                        checkAnswerOnSubmit(document.activeElement);
+                    }
+                }
+            }
+        }
+
+        function handleBlur(e) {
+            const input = e.target;
+            if (!input.disabled && input.value !== state.activeInputValue && input.value.trim() !== '') {
+                checkAnswerOnSubmit(input);
+            }
+        }
+
+        function handleFocus(e) { state.activeInputValue = e.target.value; }
+        
+        function focusNextInput(currentIndex) {
+            const nextInput = document.getElementById(`input-${currentIndex + 1}`);
+            if (nextInput && !nextInput.disabled) {
+                nextInput.focus();
+            } else {
+                 const allInputs = Array.from(dom.questionContainer.querySelectorAll('.quiz-input'));
+                 const nextAvailableInput = allInputs.find(i => !i.disabled);
+                 if(nextAvailableInput) {
+                        nextAvailableInput.focus();
+                 } else {
+                        checkAllAnswered();
+                 }
+            }
+        }
+
+        // =================================================================
+        // --- UI 및 효과 (UI & Effects) ---
+        // =================================================================
+        function formatCurrency(num) {
+            return new Intl.NumberFormat('ko-KR').format(num) + '원';
+        }
+
+        function updateMoneyUI() { 
+            dom.money.textContent = formatCurrency(state.money); 
+        }
+
+        function updateProgressUI() {
+            const progressPercent = state.initialQuizCount > 0 ? (state.countedCorrectQIDs.size / state.initialQuizCount) * 100 : 0;
+            dom.progressBar.style.width = `${Math.min(progressPercent, 100)}%`;
+            dom.currentQ.textContent = state.correctlyAnsweredCount;
+        }
+
+        function updateInputWidth(input) {
+            const computedStyle = window.getComputedStyle(input);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.font = `${computedStyle.fontWeight} ${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+            const text = input.value || input.placeholder || " ";
+            const textMetrics = ctx.measureText(text);
+            const availableWidth = dom.questionContainer.clientWidth;
+            const desiredWidth = textMetrics.width + config.INPUT_WIDTH_BUFFER;
+            const newWidth = Math.max(config.INPUT_MIN_WIDTH, Math.min(desiredWidth, availableWidth - 4));
+            input.style.width = newWidth + 'px';
+        }
+        
+        function showMoneyUpAnimation(target, text) {
+            const el = document.createElement('div');
+            el.className = 'score-up-animation text-yellow-400';
+            el.textContent = text;
+            const parentRect = dom.quizBox.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            el.style.left = `${targetRect.left - parentRect.left + targetRect.width / 2}px`;
+            el.style.top = `${targetRect.top - parentRect.top}px`;
+            dom.quizBox.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+
+        function createParticle(input) {
+            const rect = input.getBoundingClientRect();
+            for (let i = 0; i < 8; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = `${rect.left + Math.random() * rect.width}px`;
+                p.style.top = `${rect.top + rect.height / 2}px`;
+                p.style.backgroundColor = `hsl(${Math.random() * 60 + 40}, 100%, 75%)`; // Gold/Yellow tones
+                const angle = Math.random() * Math.PI - Math.PI;
+                const force = Math.random() * 4 + 2;
+                const vx = Math.cos(angle) * force;
+                const vy = Math.sin(angle) * force;
+                document.body.appendChild(p);
+                p.animate([
+                    { transform: `translate(0, 0)`, opacity: 1 },
+                    { transform: `translate(${vx*15}px, ${vy*15}px)`, opacity: 0 }
+                ], { duration: 600, easing: 'ease-out' }).onfinish = () => p.remove();
+            }
+        }
+
+        function showPerfectMessage() {
+            const perfectEl = document.createElement('div');
+            perfectEl.textContent = "Perfect!";
+            perfectEl.className = 'perfect-message';
+            dom.quizBox.appendChild(perfectEl);
+            setTimeout(() => {
+                perfectEl.classList.add('fade-out');
+                perfectEl.addEventListener('animationend', () => perfectEl.remove());
+            }, 800);
+        }
+        
+        function showToast(message) {
+            const toast = dom.reviewToast;
+            toast.textContent = message;
+            toast.classList.remove('opacity-0', 'translate-y-10');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-10');
+            }, 2000);
+        }
+
+        // =================================================================
+        // --- 캐릭터 & 지도 & 오답노트 제어 (Character & Map & Incorrect Note Control) ---
+        // =================================================================
+        function resetIdleTimer() {
+            clearTimeout(state.idleTimeout);
+            setCharExpression('normal');
+            state.idleTimeout = setTimeout(() => setCharExpression('idle'), config.IDLE_TIME);
+        }
+
+        function moveEyes(e) {
+            dom.pupils.forEach(pupil => {
+                const eye = pupil.parentElement, rect = eye.getBoundingClientRect();
+                const angle = Math.atan2(e.clientY - (rect.top + rect.height / 2), e.clientX - (rect.left + rect.width / 2));
+                pupil.style.transform = `translate(-50%, -50%) translate(${Math.cos(angle) * 7}px, ${Math.sin(angle) * 7}px)`;
+            });
+        }
+
+        let expressionTimeout;
+        function setCharExpression(type) {
+            if (state.currentExpression === type && type !== 'wave' && type !== 'celebrate') return;
+            state.currentExpression = type;
+
+            clearTimeout(expressionTimeout);
+            dom.mouth.className = 'mouth';
+            dom.eyes.forEach(eye => eye.classList.remove('idle-eyes'));
+            dom.characterBody.classList.remove('idle');
+
+            switch(type) {
+                case 'happy': dom.mouth.classList.add('happy'); break;
+                case 'worried': dom.mouth.classList.add('worried'); break;
+                case 'sad': dom.mouth.classList.add('sad'); break;
+                case 'idle':
+                    dom.characterBody.classList.add('idle');
+                    dom.eyes.forEach(eye => eye.classList.add('idle-eyes'));
+                    break;
+                case 'wave': case 'celebrate':
+                    dom.mouth.classList.add('happy');
+                    expressionTimeout = setTimeout(() => setCharExpression('normal'), 1500);
+                    break;
+                default: break;
+            }
+        }
+        
+        function populateCategoriesForRandomMode() {
+            dom.categorySelect.innerHTML = ''; // Clear previous options
+
+            const totalCount = allQuizzes.reduce((sum, cat) => sum + cat.questions.length, 0);
+            const chongronCount = allQuizzes.filter(c => c.category.startsWith('총론')).reduce((sum, cat) => sum + cat.questions.length, 0);
+            const changcheCount = allQuizzes.filter(c => c.category.startsWith('창의적 체험활동')).reduce((sum, cat) => sum + cat.questions.length, 0);
+
+            const scopeOptions = [
+                { value: 'all', text: `전범위 (${totalCount}개)` },
+                { value: 'chongron', text: `총론 전체 (${chongronCount}개)` },
+                { value: 'changche', text: `창의적 체험활동 전체 (${changcheCount}개)` }
+            ];
+
+            scopeOptions.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt.value;
+                option.textContent = opt.text;
+                dom.categorySelect.appendChild(option);
+            });
+
+            const separator = document.createElement('option');
+            separator.disabled = true;
+            separator.textContent = '──────────';
+            dom.categorySelect.appendChild(separator);
+
+            allQuizzes.forEach((cat, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${cat.category.split(' | ')[1]} (${cat.questions.length}개)`;
+                dom.categorySelect.appendChild(option);
+            });
+        }
+
+        function renderKnowledgeMap() {
+            dom.chongronMap.innerHTML = '';
+            dom.changcheMap.innerHTML = '';
+
+            allQuizzes.forEach((quizSet, index) => {
+                const status = state.completionStatus[index] || 'unlocked';
+                const iconContainer = document.createElement('div');
+                iconContainer.className = 'star-container';
+                
+                const isChongron = quizSet.category.startsWith('총론');
+                iconContainer.innerHTML = isChongron ? STAR_SVG_TEMPLATE : SPARKLE_SVG_TEMPLATE;
+                iconContainer.querySelector('svg').classList.add(status);
+
+                const label = document.createElement('div');
+                label.className = 'star-label';
+                const questionCount = quizSet.questions.length;
+                label.textContent = `${quizSet.category.split(' | ')[1]} (${questionCount}개)`;
+
+                iconContainer.appendChild(label);
+                
+                iconContainer.addEventListener('click', () => {
+                    const questionsToLoad = allQuizzes[index].questions.map(q => ({ ...q, originalCategory: q.detailedCategory, originalIndex: index }));
+                    startQuiz(questionsToLoad, 'sequential', index);
+                });
+
+                if (isChongron) {
+                    dom.chongronMap.appendChild(iconContainer);
+                } else {
+                    dom.changcheMap.appendChild(iconContainer);
+                }
+            });
+        }
+
+        function renderIncorrectNoteList() {
+            dom.incorrectListContainer.innerHTML = '';
+            const incorrectQids = loadData('quizIncorrectNotes', []);
+            if (incorrectQids.length === 0) {
+                dom.incorrectListContainer.innerHTML = `<p class="text-gray-400">오답 기록이 없습니다. 완벽해요!</p>`;
+                dom.startIncorrectQuizBtn.disabled = true;
+                dom.clearIncorrectNotesBtn.disabled = true;
+                return;
+            }
+            
+            dom.startIncorrectQuizBtn.disabled = false;
+            dom.clearIncorrectNotesBtn.disabled = false;
+            
+            const incorrectQuestions = [];
+            allQuizzes.forEach(category => {
+                category.questions.forEach(q => {
+                    if(incorrectQids.includes(q.qid)) {
+                        incorrectQuestions.push(q);
+                    }
+                })
+            });
+
+            incorrectQuestions.forEach(note => {
+                const item = document.createElement('div');
+                item.className = 'incorrect-item';
+                
+                const category = document.createElement('div');
+                category.className = 'incorrect-item-category';
+                category.textContent = note.detailedCategory;
+
+                const question = document.createElement('div');
+                question.className = 'incorrect-item-question';
+                question.textContent = note.question.replace(/\{\d+\}/g, '___');
+
+                item.appendChild(category);
+                item.appendChild(question);
+                dom.incorrectListContainer.appendChild(item);
+            });
+        }
+        
+        function updateIncorrectNoteButton() {
+            const incorrectNotes = loadData('quizIncorrectNotes', []);
+            dom.selectModeIncorrectBtn.disabled = incorrectNotes.length === 0;
+            dom.selectModeIncorrectBtn.textContent = `오답노트 (${incorrectNotes.length})`;
+        }
+
+        function updateCharacterGrowth() {
+            const perfectCount = Object.values(state.completionStatus).filter(s => s === 'perfect').length;
+            const totalCategories = allQuizzes.length;
+            dom.characterBody.classList.remove('level-2', 'level-3');
+            dom.characterBody.style.setProperty('--scale', 1);
+
+            if (perfectCount / totalCategories >= 0.8) {
+                dom.characterBody.classList.add('level-3');
+                dom.characterBody.style.setProperty('--scale', 1.2);
+            } else if (perfectCount / totalCategories >= 0.4) {
+                dom.characterBody.classList.add('level-2');
+                dom.characterBody.style.setProperty('--scale', 1.1);
+            }
+        }
+
+        // =================================================================
+        // --- 룰렛 로직 (Roulette Logic) ---
+        // =================================================================
+        const rouletteItems = [
+            { label: '+20,000', color: '#4CAF50', type: 'add', value: 20000, weight: 20 },
+            { label: '꽝', color: '#757575', type: 'dud', value: 0, weight: 18 },
+            { label: '+50,000', color: '#81C784', type: 'add', value: 50000, weight: 15 },
+            { label: '-30,000', color: '#E57373', type: 'add', value: -30000, weight: 7 },
+            { label: '자산 +20%', color: '#64B5F6', type: 'percent', value: 0.20, weight: 7 },
+            { label: '자산 -20%', color: '#EF5350', type: 'percent', value: -0.20, weight: 7 },
+            { label: '+150,000', color: '#AED581', type: 'add', value: 150000, weight: 4 },
+            { label: '2배 (3문제)', color: '#FFB74D', type: 'multiplier', value: 2, turns: 3, weight: 3 },
+            { label: '자산 +50%', color: '#4FC3F7', type: 'percent', value: 0.50, weight: 3 },
+            { label: 'JACKPOT!', color: '#FFEE58', type: 'add', value: 1000000, weight: 1 },
+        ];
+        let isSpinning = false;
+        
+        function setupSlotMachine() {
+            const reel = dom.reels[0];
+            if (!reel) return;
+            const strip = reel.querySelector('.reel-strip');
+            if (!strip) return;
+            strip.innerHTML = '';
+            const items = [...rouletteItems, ...rouletteItems, ...rouletteItems];
+
+            items.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'reel-item';
+                itemEl.textContent = item.label;
+                itemEl.style.backgroundColor = item.color;
+                itemEl.dataset.label = item.label;
+                strip.appendChild(itemEl);
+            });
+        }
+
+
+        function spinRoulette() {
+            if (isSpinning) return;
+            isSpinning = true;
+            dom.spinBtn.disabled = true;
+            dom.spinBtn.classList.remove('can-spin');
+            dom.rouletteResult.textContent = '';
+
+            const totalWeight = rouletteItems.reduce((sum, item) => sum + item.weight, 0);
+            let randomWeight = Math.random() * totalWeight;
+            let resultItem;
+            for (const item of rouletteItems) {
+                randomWeight -= item.weight;
+                if (randomWeight < 0) {
+                    resultItem = item;
+                    break;
+                }
+            }
+
+            const reel = dom.reels[0];
+            if (!reel) return;
+            const strip = reel.querySelector('.reel-strip');
+            if (!strip) return;
+
+            strip.style.transition = 'none';
+            strip.style.transform = 'translateY(0)';
+            
+            const resultIndex = rouletteItems.findIndex(item => item.label === resultItem.label);
+            const targetIndex = rouletteItems.length + (resultIndex === -1 ? 0 : resultIndex);
+
+            setTimeout(() => {
+                const spinDuration = 1.5; // seconds
+                strip.style.transition = `transform ${spinDuration}s cubic-bezier(0.25, 0.1, 0.25, 1)`;
+                const targetPosition = -targetIndex * 120;
+                strip.style.transform = `translateY(${targetPosition}px)`;
+            }, 100);
+            
+            const clickInterval = setInterval(() => {
+                sounds.rouletteClick.triggerAttackRelease('8n', Tone.now());
+            }, 80);
+
+            setTimeout(() => {
+                isSpinning = false;
+                clearInterval(clickInterval);
+                applyRouletteResult(resultItem, targetIndex);
+                setTimeout(hideRoulette, 2000);
+            }, 1700);
+        }
+
+        function applyRouletteResult(item, targetIndex) {
+            let resultText = '';
+            
+            const strip = dom.reels[0].querySelector('.reel-strip');
+            if(strip && strip.children[targetIndex]) {
+                strip.children[targetIndex].classList.add('active');
+            }
+
+            if (item.label === 'JACKPOT!') {
+                showJackpotEffect();
+                sounds.jackpot.triggerAttackRelease(['C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'], '1s', Tone.now());
+            } else if ((item.type === 'add' && item.value > 0) || (item.type === 'percent' && item.value > 0) || item.type === 'multiplier') {
+                 sounds.win.triggerAttackRelease(['C5', 'E5', 'G5'], '8n', Tone.now());
+            } else {
+                 sounds.incorrect1.triggerAttackRelease('G2', '8n', Tone.now());
+            }
+            
+            switch(item.type) {
+                case 'add':
+                    state.money += item.value;
+                    resultText = `${formatCurrency(item.value)} ${item.value >= 0 ? '획득!' : '잃음...'}`;
+                    break;
+                case 'percent':
+                    const change = Math.floor(state.money * item.value);
+                    state.money += change;
+                    resultText = `자산 ${item.value > 0 ? '+' : ''}${item.value * 100}% (${formatCurrency(change)})`;
+                    break;
+                case 'multiplier':
+                    state.moneyMultiplier = item.value;
+                    state.multiplierTurnsLeft = item.turns;
+                    resultText = `${item.turns}문제 동안 획득 자산 ${item.value}배!`;
+                    break;
+                case 'dud':
+                    resultText = '아쉽지만... 꽝!';
+                    break;
+            }
+            
+            if (state.money < 0) state.money = 0;
+            
+            dom.rouletteResult.textContent = resultText;
+            updateMoneyUI();
+            saveData('money', state.money);
+        }
+        
+        function showJackpotEffect() {
+            const overlay = document.createElement('div');
+            overlay.className = 'jackpot-overlay';
+            const text = document.createElement('div');
+            text.className = 'jackpot-text';
+            text.textContent = 'JACKPOT!';
+            overlay.appendChild(text);
+            document.body.appendChild(overlay);
+            setTimeout(() => overlay.remove(), 2000);
+        }
+
+        function showRoulette() {
+            dom.rouletteScreen.classList.remove('hidden');
+            dom.rouletteScreen.classList.add('flex');
+            setupSlotMachine();
+            dom.spinBtn.disabled = false;
+            dom.spinBtn.classList.add('can-spin');
+        }
+
+        function hideRoulette() {
+            dom.rouletteScreen.classList.add('hidden');
+            dom.rouletteScreen.classList.remove('flex');
+            dom.nextBtn.classList.remove('hidden');
+            dom.nextBtn.focus();
+        }
+
+
+        // --- 초기화 (Initialization) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            dom = {
+                body: document.body,
+                loadingScreen: document.getElementById('loading-screen'),
+                gameUI: document.getElementById('game-ui'),
+                money: document.getElementById('money'),
+                progressBar: document.getElementById('progress-bar'),
+                currentQ: document.getElementById('current-q'),
+                totalQ: document.getElementById('total-q'),
+                categoryDisplay: document.getElementById('category-display'),
+                quizBox: document.getElementById('quiz-box'),
+                questionContainer: document.getElementById('question-container'),
+                nextBtn: document.getElementById('next-btn'),
+                startScreen: document.getElementById('start-screen'),
+                step1ModeSelection: document.getElementById('step-1-mode-selection'),
+                step2ScopeSelection: document.getElementById('step-2-scope-selection'),
+                selectModeSequentialBtn: document.getElementById('select-mode-sequential'),
+                selectModeRandomBtn: document.getElementById('select-mode-random'),
+                selectModeIncorrectBtn: document.getElementById('select-mode-incorrect'),
+                backToModeSelectionBtn: document.getElementById('back-to-mode-selection'),
+                sequentialModeUi: document.getElementById('sequential-mode-ui'),
+                randomModeUi: document.getElementById('random-mode-ui'),
+                startBtn: document.getElementById('start-btn'),
+                categorySelect: document.getElementById('category-select'),
+                chongronMap: document.getElementById('chongron-map'),
+                changcheMap: document.getElementById('changche-map'),
+                endScreen: document.getElementById('end-screen'),
+                finalMoney: document.getElementById('final-money'),
+                retryBtn: document.getElementById('retry-btn'),
+                mainMenuBtn: document.getElementById('main-menu-btn'),
+                homeBtn: document.getElementById('home-btn'),
+                characterBody: document.getElementById('character-body'),
+                eyes: document.querySelectorAll('.eye'),
+                pupils: document.querySelectorAll('.pupil'),
+                mouth: document.getElementById('mouth'),
+                incorrectNoteScreen: document.getElementById('incorrect-note-screen'),
+                backToMainFromIncorrectBtn: document.getElementById('back-to-main-from-incorrect'),
+                incorrectListContainer: document.getElementById('incorrect-list-container'),
+                startIncorrectQuizBtn: document.getElementById('start-incorrect-quiz-btn'),
+                clearIncorrectNotesBtn: document.getElementById('clear-incorrect-notes-btn'),
+                rouletteScreen: document.getElementById('roulette-screen'),
+                slotMachine: document.getElementById('slot-machine'),
+                reels: document.querySelectorAll('.reel'),
+                rouletteResult: document.getElementById('roulette-result'),
+                spinBtn: document.getElementById('spin-btn'),
+                reviewToast: document.getElementById('review-toast'),
+            };
+
+            initializeGlobalState();
+            renderKnowledgeMap();
+            updateCharacterGrowth();
+            updateIncorrectNoteButton();
+            updateMoneyUI();
+            
+            const allButtons = document.querySelectorAll('button');
+            allButtons.forEach(button => {
+                button.addEventListener('click', async () => {
+                    if (Tone.context.state !== 'running') {
+                        await Tone.start();
+                    }
+                    sounds.click.triggerAttackRelease('C4', '32n', Tone.now());
+                });
+            });
+
+            dom.selectModeSequentialBtn.addEventListener('click', () => {
+                dom.step1ModeSelection.classList.add('hidden');
+                dom.step2ScopeSelection.classList.remove('hidden');
+                dom.sequentialModeUi.classList.remove('hidden');
+                dom.randomModeUi.classList.add('hidden');
+            });
+
+            dom.selectModeRandomBtn.addEventListener('click', () => {
+                populateCategoriesForRandomMode();
+                dom.step1ModeSelection.classList.add('hidden');
+                dom.step2ScopeSelection.classList.remove('hidden');
+                dom.sequentialModeUi.classList.add('hidden');
+                dom.randomModeUi.classList.remove('hidden');
+            });
+
+            dom.selectModeIncorrectBtn.addEventListener('click', () => {
+                state.incorrectNotes = loadData('quizIncorrectNotes', []);
+                renderIncorrectNoteList();
+                dom.startScreen.classList.add('hidden');
+                dom.incorrectNoteScreen.classList.remove('hidden');
+                dom.incorrectNoteScreen.classList.add('flex');
+            });
+
+            dom.backToModeSelectionBtn.addEventListener('click', () => {
+                dom.step2ScopeSelection.classList.add('hidden');
+                dom.step1ModeSelection.classList.remove('hidden');
+            });
+            
+            dom.backToMainFromIncorrectBtn.addEventListener('click', returnToMainMenu);
+
+            dom.startBtn.addEventListener('click', () => {
+                const selectedIndex = dom.categorySelect.value;
+                let questionsToLoad = [];
+                if (selectedIndex === 'all') {
+                    questionsToLoad = allQuizzes.flatMap(cat => cat.questions.map(q => ({...q, originalCategory: q.detailedCategory})));
+                } else if (selectedIndex === 'chongron') {
+                    questionsToLoad = allQuizzes.filter(c => c.category.startsWith('총론')).flatMap(cat => cat.questions.map(q => ({...q, originalCategory: q.detailedCategory})));
+                } else if (selectedIndex === 'changche') {
+                    questionsToLoad = allQuizzes.filter(c => c.category.startsWith('창의적 체험활동')).flatMap(cat => cat.questions.map(q => ({...q, originalCategory: q.detailedCategory})));
+                } else {
+                    questionsToLoad = allQuizzes[selectedIndex].questions.map(q => ({...q, originalCategory: q.detailedCategory}));
+                }
+                startQuiz(questionsToLoad, 'random', selectedIndex);
+            });
+
+            dom.startIncorrectQuizBtn.addEventListener('click', () => {
+                const incorrectQids = loadData('quizIncorrectNotes', []);
+                if (incorrectQids.length === 0) {
+                    showToast("오답 노트에 문항이 없습니다!");
+                    return;
+                }
+                const questionsToReview = [];
+                allQuizzes.forEach(category => {
+                    category.questions.forEach(q => {
+                        if(incorrectQids.includes(q.qid)) {
+                            questionsToReview.push({ ...q, originalCategory: q.detailedCategory });
+                        }
+                    });
+                });
+                startQuiz(questionsToReview, 'incorrect');
+            });
+
+            dom.clearIncorrectNotesBtn.addEventListener('click', () => {
+                clearIncorrectNotes();
+                updateIncorrectNoteButton();
+            });
+
+            dom.retryBtn.addEventListener('click', retryGame);
+            dom.mainMenuBtn.addEventListener('click', returnToMainMenu);
+            dom.homeBtn.addEventListener('click', returnToMainMenu);
+            dom.nextBtn.addEventListener('click', nextQuestion);
+            dom.spinBtn.addEventListener('click', spinRoulette);
+            
+            window.addEventListener('mousemove', moveEyes);
+            document.addEventListener('keydown', handleEnterKey);
+
+            dom.loadingScreen.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
