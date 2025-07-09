@@ -1256,10 +1256,14 @@
 
         function applyRouletteResult(item, targetIndex) {
             let resultText = '';
-            
+
             const strip = dom.reels[0].querySelector('.reel-strip');
-            if(strip && strip.children[targetIndex]) {
-                strip.children[targetIndex].classList.add('active');
+            if (strip) {
+                const actives = strip.querySelectorAll('.active');
+                actives.forEach(el => el.classList.remove('active'));
+                if (strip.children[targetIndex]) {
+                    strip.children[targetIndex].classList.add('active');
+                }
             }
 
             if (item.label === 'JACKPOT!') {
