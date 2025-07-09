@@ -32,7 +32,7 @@
         .quiz-input.incorrect-1 { border-bottom: 2px solid #F97316; }
         .quiz-input.incorrect-2 { border-bottom: 2px solid #EF5350; color: #EF5350; }
         
-        #question-container { color: #E5E7EB; line-height: 2; text-align: left; font-size: 1.5rem; }
+        #question-container { color: #E5E7EB; line-height: 2; text-align: left; }
 
         /* --- 애니메이션 및 효과 --- */
         @keyframes wobble { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
@@ -94,6 +94,8 @@
             width: 100%;
             max-width: 800px;
             margin-top: 1rem;
+            margin-left: auto;
+            margin-right: auto;
         }
         .map-title {
             font-family: 'Jua', sans-serif;
@@ -108,6 +110,7 @@
             grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
             gap: 1rem;
         }
+        #knowledge-map { display: flex; flex-direction: column; align-items: center; }
         .star-container {
             display: flex; flex-direction: column; align-items: center;
             cursor: pointer; transition: transform 0.2s;
@@ -684,10 +687,10 @@
             }
             dom.categoryDisplay.innerHTML = categoryText;
             
-            dom.questionContainer.classList.remove('text-2xl', 'sm:text-3xl', 'text-xl', 'sm:text-2xl', 'text-lg', 'sm:text-xl');
-            if (quiz.question.length > 200) { dom.questionContainer.classList.add('text-lg', 'sm:text-xl'); }
-            else if (quiz.question.length > 150) { dom.questionContainer.classList.add('text-xl', 'sm:text-2xl'); }
-            else { dom.questionContainer.classList.add('text-2xl', 'sm:text-3xl'); }
+            dom.questionContainer.classList.remove('text-3xl', 'sm:text-4xl', 'text-2xl', 'sm:text-3xl', 'text-xl', 'sm:text-2xl', 'text-lg', 'sm:text-xl');
+            if (quiz.question.length > 200) { dom.questionContainer.classList.add('text-xl', 'sm:text-2xl'); }
+            else if (quiz.question.length > 150) { dom.questionContainer.classList.add('text-2xl', 'sm:text-3xl'); }
+            else { dom.questionContainer.classList.add('text-3xl', 'sm:text-4xl'); }
 
             dom.questionContainer.innerHTML = '';
 
