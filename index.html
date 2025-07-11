@@ -307,6 +307,9 @@
                             <div id="changche-map" class="map-grid"></div>
                         </div>
                     </div>
+                    <div class="flex justify-center mt-4">
+                        <button id="reset-progress-btn" class="font-jua text-xl bg-gray-600 px-4 py-2 rounded-full hover:bg-gray-500 transition-colors">진행도 리셋</button>
+                    </div>
                 </div>
                 <!-- Random Mode UI -->
                 <div id="random-mode-ui" class="hidden">
@@ -471,7 +474,7 @@
             state = {
                 gameMode: 'sequential',
                 money: 0, // 사이트 방문 시 자산 초기화
-                completionStatus: {}, // 방문 시마다 진행 상태 초기화
+                completionStatus: loadData('quizProgress', {}),
                 incorrectNotes: loadData('quizIncorrectNotes', []),
                 currentExpression: 'normal',
                 idleTimeout: null,
@@ -480,7 +483,6 @@
                 ...state // 기존 상태 유지
             };
             saveData('money', 0);
-            localStorage.removeItem('quizProgress'); // 방문 시 진행 상태 초기화
             resetQuizState(); // 퀴즈 관련 상태는 초기화
         }
 
@@ -1104,6 +1106,14 @@ function setCharExpression(type) {
             dom.selectModeIncorrectBtn.textContent = `오답노트 (${incorrectNotes.length})`;
         }
 
+        function resetProgress() {
+            if (!confirm('지식 지도를 초기화할까요?')) return;
+            state.completionStatus = {};
+            saveData('quizProgress', state.completionStatus);
+            renderKnowledgeMap();
+            showToast('지식 지도가 초기화되었습니다!');
+        }
+
         // plant system removed
 
         // =================================================================
@@ -1304,6 +1314,7 @@ function setCharExpression(type) {
                 incorrectListContainer: document.getElementById('incorrect-list-container'),
                 startIncorrectQuizBtn: document.getElementById('start-incorrect-quiz-btn'),
                 clearIncorrectNotesBtn: document.getElementById('clear-incorrect-notes-btn'),
+                resetProgressBtn: document.getElementById('reset-progress-btn'),
                 rouletteScreen: document.getElementById('roulette-screen'),
                 slotMachine: document.getElementById('slot-machine'),
                 reels: document.querySelectorAll('.reel'),
@@ -1395,6 +1406,8 @@ function setCharExpression(type) {
                 clearIncorrectNotes();
                 updateIncorrectNoteButton();
             });
+
+            dom.resetProgressBtn.addEventListener('click', resetProgress);
 
             dom.retryBtn.addEventListener('click', retryGame);
             dom.mainMenuBtn.addEventListener('click', returnToMainMenu);
