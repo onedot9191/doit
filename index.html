@@ -52,46 +52,7 @@
         .perfect-message.fade-out { animation: perfect-fade-out 0.5s ease-in forwards; }
 
 
-        /* --- 식물 --- */
-        .plant-container {
-            width: 120px; height: 150px; position: relative;
-            display: flex; justify-content: center; align-items: flex-end;
-            transition: transform 0.3s ease-in-out;
-        }
-        .plant-container.level-2 { transform: scale(1.1); }
-        .plant-container.level-3 { transform: scale(1.2); }
-        @keyframes idle-bounce { 0%,100% { transform: translateY(0) scale(var(--scale,1)); } 50% { transform: translateY(-5px) scale(var(--scale,1)); } }
-        .plant-container.idle { animation: idle-bounce 1.5s ease-in-out infinite; }
-        .plant {
-            position: relative;
-            width: 24px;
-            background: linear-gradient(to bottom, #a5f1ff, #7ed957);
-            border-radius: 12px 12px 6px 6px;
-            transition: height 0.3s ease;
-        }
-        .plant::before, .plant::after {
-            content: '';
-            position: absolute;
-            width: 18px; height: 12px;
-            background: #7ed957;
-            border-radius: 50%;
-            top: -6px;
-        }
-        .plant::before { left: -10px; transform: rotate(-20deg); }
-        .plant::after { right: -10px; transform: rotate(20deg); }
-        .pot {
-            width: 64px; height: 24px; background: #d39e72;
-            border-radius: 5px 5px 0 0; position: absolute; bottom: 0;
-            left: 50%; transform: translateX(-50%);
-        }
-        .plant.stage-1 { height: 12px; }
-        .plant.stage-2 { height: 30px; }
-        .plant.stage-3 { height: 48px; }
-        .plant.stage-4 { height: 66px; }
-        .plant.stage-5 { height: 84px; }
-        .plant.stage-6 { height: 102px; }
-        .plant.stage-7 { height: 120px; }
-        .plant.stage-8 { height: 138px; }
+        /* (Plant visuals removed) */
 /* --- Celebration Effects --- */
         .confetti { position: fixed; top: -10px; width: 8px; height: 8px; pointer-events: none; z-index: 100; }
         @keyframes screen-shake { 0%,100% { transform: translate(0,0); } 20%,60% { transform: translate(-5px,5px); } 40%,80% { transform: translate(5px,-5px); } }
@@ -314,13 +275,7 @@
         <button id="next-btn" class="font-jua text-xl sm:text-2xl bg-[#42A5F5] text-black px-8 py-3 rounded-full mt-8 transition-all duration-200 hover:scale-110 active:scale-95 hidden">Enter</button>
     </div>
 
-    <!-- 식물 -->
-    <div class="fixed right-4 bottom-4 sm:right-8 sm:bottom-8 z-20">
-        <div id="plant-container" class="plant-container idle">
-            <div id="plant" class="plant stage-1"></div>
-            <div class="pot"></div>
-        </div>
-    </div>
+
 
     <!-- 시작/완료/오답노트 오버레이 -->
     <div id="start-screen" class="absolute inset-0 bg-black/80 flex flex-col justify-center items-center z-10 text-center p-4 overflow-y-auto">
@@ -519,7 +474,6 @@
                 completionStatus: {}, // 방문 시마다 진행 상태 초기화
                 incorrectNotes: loadData('quizIncorrectNotes', []),
                 currentExpression: 'normal',
-                plantStage: 1,
                 idleTimeout: null,
                 lastTypeSoundTime: 0,
                 activeInputValue: null,
@@ -666,7 +620,6 @@
                 }
                 saveData('quizProgress', state.completionStatus);
                 renderKnowledgeMap();
-                updatePlantGrowth();
             }
             
             dom.gameUI.classList.add('hidden');
@@ -850,7 +803,6 @@
             const allDisabled = Array.from(dom.questionContainer.querySelectorAll('.quiz-input')).every(i => i.disabled);
             if (allDisabled) {
                 const quiz = state.activeQuizzes[state.currentQuizIndex];
-                growPlant();
                 
                 const hasSecondWrong = Object.values(state.incorrectAttempts).some(v => v >= 2);
 
@@ -1019,7 +971,7 @@
         }
 
         // =================================================================
-        // --- 식물 & 지도 & 오답노트 제어 (Plant & Map & Incorrect Note Control) ---
+        // --- 지도 & 오답노트 제어 (Map & Incorrect Note Control) ---
         // =================================================================
         function resetIdleTimer() {
             clearTimeout(state.idleTimeout);
@@ -1035,28 +987,8 @@ function setCharExpression(type) {
     state.currentExpression = type;
 
     clearTimeout(expressionTimeout);
-    dom.plantContainer.classList.remove('idle');
-    dom.plantContainer.style.transform = 'scale(1)';
-
-    switch(type) {
-        case 'happy':
-            dom.plantContainer.style.transform = 'scale(1.05)';
-            break;
-        case 'worried':
-        case 'sad':
-            dom.plantContainer.style.transform = 'scale(0.95)';
-            break;
-        case 'idle':
-            dom.plantContainer.classList.add('idle');
-            break;
-        case 'wave':
-        case 'celebrate':
-            dom.plantContainer.style.transform = 'scale(1.1)';
-            expressionTimeout = setTimeout(() => setCharExpression('idle'), 1500);
-            break;
-        default:
-            dom.plantContainer.style.transform = 'scale(1)';
-            break;
+    if (type === 'wave' || type === 'celebrate') {
+        expressionTimeout = setTimeout(() => setCharExpression('idle'), 1500);
     }
 }
         
@@ -1172,30 +1104,7 @@ function setCharExpression(type) {
             dom.selectModeIncorrectBtn.textContent = `오답노트 (${incorrectNotes.length})`;
         }
 
-        function updatePlantGrowth() {
-            const perfectCount = Object.values(state.completionStatus).filter(s => s === 'perfect').length;
-            const totalCategories = allQuizzes.length;
-            dom.plantContainer.style.setProperty('--scale', 1);
-            dom.plantContainer.classList.remove('level-2', 'level-3');
-
-            if (perfectCount / totalCategories >= 0.8) {
-                dom.plantContainer.classList.add('level-3');
-                dom.plantContainer.style.setProperty('--scale', 1.2);
-            } else if (perfectCount / totalCategories >= 0.4) {
-                dom.plantContainer.classList.add('level-2');
-                dom.plantContainer.style.setProperty('--scale', 1.1);
-            }
-        }
-
-        function updatePlantStage() {
-            dom.plant.className = `plant stage-${state.plantStage}`;
-        }
-
-        function growPlant() {
-            state.plantStage = (state.plantStage || 1) + 1;
-            if (state.plantStage > 8) state.plantStage = 8;
-            updatePlantStage();
-        }
+        // plant system removed
 
         // =================================================================
         // --- 룰렛 로직 (Roulette Logic) ---
@@ -1212,7 +1121,6 @@ function setCharExpression(type) {
             { label: '2배 (3문제)', color: '#FFB74D', type: 'multiplier', value: 2, turns: 3, weight: 3 },
             { label: '자산 +50%', color: '#4FC3F7', type: 'percent', value: 0.50, weight: 3 },
             { label: '자산 +100%', color: '#FFD54F', type: 'percent', value: 1.00, weight: 2 },
-            { label: '식물 성장!', color: '#BA68C8', type: 'plant', value: 1, weight: 6 },
             { label: 'JACKPOT!', color: '#FFEE58', type: 'add', value: 1000000, weight: 1 },
         ];
         let isSpinning = false;
@@ -1320,10 +1228,6 @@ function setCharExpression(type) {
                     state.multiplierTurnsLeft = item.turns;
                     resultText = `${item.turns}문제 동안 획득 자산 ${item.value}배!`;
                     break;
-                case 'plant':
-                    growPlant();
-                    resultText = '식물이 한 단계 자랐어요!';
-                    break;
                 case 'dud':
                     resultText = '아쉽지만... 꽝!';
                     break;
@@ -1395,8 +1299,6 @@ function setCharExpression(type) {
                 retryBtn: document.getElementById('retry-btn'),
                 mainMenuBtn: document.getElementById('main-menu-btn'),
                 homeBtn: document.getElementById('home-btn'),
-                plantContainer: document.getElementById('plant-container'),
-                plant: document.getElementById('plant'),
                 incorrectNoteScreen: document.getElementById('incorrect-note-screen'),
                 backToMainFromIncorrectBtn: document.getElementById('back-to-main-from-incorrect'),
                 incorrectListContainer: document.getElementById('incorrect-list-container'),
@@ -1414,9 +1316,7 @@ function setCharExpression(type) {
 
             initializeGlobalState();
             renderKnowledgeMap();
-            updatePlantGrowth();
             updateIncorrectNoteButton();
-            updatePlantStage();
             updateMoneyUI();
             
             const allButtons = document.querySelectorAll('button');
