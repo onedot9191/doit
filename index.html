@@ -54,7 +54,7 @@
 
         /* --- 식물 --- */
         .plant-container {
-            width: 112px; height: 112px; position: relative;
+            width: 120px; height: 150px; position: relative;
             display: flex; justify-content: center; align-items: flex-end;
             transition: transform 0.3s ease-in-out;
         }
@@ -63,19 +63,35 @@
         @keyframes idle-bounce { 0%,100% { transform: translateY(0) scale(var(--scale,1)); } 50% { transform: translateY(-5px) scale(var(--scale,1)); } }
         .plant-container.idle { animation: idle-bounce 1.5s ease-in-out infinite; }
         .plant {
-            width: 20px; background: #66BB6A; border-radius: 10px;
+            position: relative;
+            width: 24px;
+            background: linear-gradient(to bottom, #a5f1ff, #7ed957);
+            border-radius: 12px 12px 6px 6px;
             transition: height 0.3s ease;
         }
+        .plant::before, .plant::after {
+            content: '';
+            position: absolute;
+            width: 18px; height: 12px;
+            background: #7ed957;
+            border-radius: 50%;
+            top: -6px;
+        }
+        .plant::before { left: -10px; transform: rotate(-20deg); }
+        .plant::after { right: -10px; transform: rotate(20deg); }
         .pot {
-            width: 60px; height: 20px; background: #8D6E63;
+            width: 64px; height: 24px; background: #d39e72;
             border-radius: 5px 5px 0 0; position: absolute; bottom: 0;
             left: 50%; transform: translateX(-50%);
         }
-        .plant.stage-1 { height: 10px; }
+        .plant.stage-1 { height: 12px; }
         .plant.stage-2 { height: 30px; }
-        .plant.stage-3 { height: 50px; }
-        .plant.stage-4 { height: 70px; }
-        .plant.stage-5 { height: 90px; }
+        .plant.stage-3 { height: 48px; }
+        .plant.stage-4 { height: 66px; }
+        .plant.stage-5 { height: 84px; }
+        .plant.stage-6 { height: 102px; }
+        .plant.stage-7 { height: 120px; }
+        .plant.stage-8 { height: 138px; }
 /* --- Celebration Effects --- */
         .confetti { position: fixed; top: -10px; width: 8px; height: 8px; pointer-events: none; z-index: 100; }
         @keyframes screen-shake { 0%,100% { transform: translate(0,0); } 20%,60% { transform: translate(-5px,5px); } 40%,80% { transform: translate(5px,-5px); } }
@@ -446,10 +462,12 @@
                 envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.1 },
                 volume: -16
             }).toDestination(),
-            rouletteClick: new Tone.NoiseSynth({
-                noise: { type: 'pink' },
-                envelope: { attack: 0.001, decay: 0.05, sustain: 0 },
-                volume: -22
+            rouletteClick: new Tone.MetalSynth({
+                frequency: 200,
+                envelope: { attack: 0.001, decay: 0.2, release: 0.1 },
+                harmonicity: 5,
+                modulationIndex: 20,
+                volume: -15
             }).toDestination(),
             win: new Tone.PolySynth(Tone.Synth, {
                 oscillator: { type: "triangle8" },
@@ -1175,7 +1193,7 @@ function setCharExpression(type) {
 
         function growPlant() {
             state.plantStage = (state.plantStage || 1) + 1;
-            if (state.plantStage > 5) state.plantStage = 5;
+            if (state.plantStage > 8) state.plantStage = 8;
             updatePlantStage();
         }
 
@@ -1190,8 +1208,11 @@ function setCharExpression(type) {
             { label: '자산 +20%', color: '#64B5F6', type: 'percent', value: 0.20, weight: 7 },
             { label: '자산 -20%', color: '#EF5350', type: 'percent', value: -0.20, weight: 7 },
             { label: '+150,000', color: '#AED581', type: 'add', value: 150000, weight: 4 },
+            { label: '+200,000', color: '#C5E1A5', type: 'add', value: 200000, weight: 2 },
             { label: '2배 (3문제)', color: '#FFB74D', type: 'multiplier', value: 2, turns: 3, weight: 3 },
             { label: '자산 +50%', color: '#4FC3F7', type: 'percent', value: 0.50, weight: 3 },
+            { label: '자산 +100%', color: '#FFD54F', type: 'percent', value: 1.00, weight: 2 },
+            { label: '식물 성장!', color: '#BA68C8', type: 'plant', value: 1, weight: 6 },
             { label: 'JACKPOT!', color: '#FFEE58', type: 'add', value: 1000000, weight: 1 },
         ];
         let isSpinning = false;
@@ -1245,22 +1266,22 @@ function setCharExpression(type) {
             const targetIndex = rouletteItems.length + (resultIndex === -1 ? 0 : resultIndex);
 
             setTimeout(() => {
-                const spinDuration = 1.5; // seconds
+                const spinDuration = 1.0; // seconds
                 strip.style.transition = `transform ${spinDuration}s cubic-bezier(0.25, 0.1, 0.25, 1)`;
                 const targetPosition = -targetIndex * 120;
                 strip.style.transform = `translateY(${targetPosition}px)`;
             }, 100);
-            
+
             const clickInterval = setInterval(() => {
                 sounds.rouletteClick.triggerAttackRelease('8n', Tone.now());
-            }, 80);
+            }, 50);
 
             setTimeout(() => {
                 isSpinning = false;
                 clearInterval(clickInterval);
                 applyRouletteResult(resultItem, targetIndex);
                 setTimeout(hideRoulette, 2000);
-            }, 1700);
+            }, 1100);
         }
 
         function applyRouletteResult(item, targetIndex) {
@@ -1298,6 +1319,10 @@ function setCharExpression(type) {
                     state.moneyMultiplier = item.value;
                     state.multiplierTurnsLeft = item.turns;
                     resultText = `${item.turns}문제 동안 획득 자산 ${item.value}배!`;
+                    break;
+                case 'plant':
+                    growPlant();
+                    resultText = '식물이 한 단계 자랐어요!';
                     break;
                 case 'dud':
                     resultText = '아쉽지만... 꽝!';
