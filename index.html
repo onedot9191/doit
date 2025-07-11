@@ -52,41 +52,34 @@
         .perfect-message.fade-out { animation: perfect-fade-out 0.5s ease-in forwards; }
 
 
-        /* --- 캐릭터 --- */
-        .character-body {
-            width: 112px; height: 112px; background: #42A5F5; border-radius: 50%;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            gap: 4px; position: relative; transition: all 0.3s ease-in-out;
+        /* --- 식물 --- */
+        .plant-container {
+            width: 112px; height: 112px; position: relative;
+            display: flex; justify-content: center; align-items: flex-end;
+            transition: transform 0.3s ease-in-out;
         }
-        .character-body.level-2 { transform: scale(1.1); background-color: #64B5F6; box-shadow: 0 0 15px #64B5F6; }
-        .character-body.level-3 { transform: scale(1.2); background-color: #1E88E5; box-shadow: 0 0 25px #1E88E5; }
-
-        @keyframes idle-bounce { 0%, 100% { transform: translateY(0) scale(var(--scale, 1)); } 50% { transform: translateY(-5px) scale(var(--scale, 1)); } }
-        .idle { animation: idle-bounce 1.5s ease-in-out infinite; }
-        
-        .eye-row { display: flex; gap: 8px; }
-        .eye {
-            width: 30px; height: 40px; background: white; border-radius: 50%;
-            position: relative; border: 2px solid #1a1a1a; overflow: hidden; transition: all 0.2s ease;
+        .plant-container.level-2 { transform: scale(1.1); }
+        .plant-container.level-3 { transform: scale(1.2); }
+        @keyframes idle-bounce { 0%,100% { transform: translateY(0) scale(var(--scale,1)); } 50% { transform: translateY(-5px) scale(var(--scale,1)); } }
+        .plant-container.idle { animation: idle-bounce 1.5s ease-in-out infinite; }
+        .plant {
+            width: 20px; background: #66BB6A; border-radius: 10px;
+            transition: height 0.3s ease;
         }
-        .eye.idle-eyes { height: 5px; top: 18px; }
-        .pupil {
-            width: 12px; height: 12px; background: #1a1a1a; border-radius: 50%;
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        .pot {
+            width: 60px; height: 20px; background: #8D6E63;
+            border-radius: 5px 5px 0 0; position: absolute; bottom: 0;
+            left: 50%; transform: translateX(-50%);
         }
-        .mouth {
-            width: 20px; height: 3px; background-color: #1a1a1a; border-radius: 2px; transition: all 0.2s ease;
-        }
-        .mouth.happy { height: 10px; width: 25px; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; border-top-left-radius: 0; border-top-right-radius: 0; background-color: #1a1a1a; transform: translateY(-3px); }
-        .mouth.worried { height: 10px; width: 25px; border-top-left-radius: 15px; border-top-right-radius: 15px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; background-color: #1a1a1a; transform: translateY(3px); }
-        .mouth.sad { height: 10px; width: 25px; border-top-left-radius: 15px; border-top-right-radius: 15px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; background-color: #1a1a1a; transform: translateY(5px); }
+        .plant.stage-1 { height: 10px; }
+        .plant.stage-2 { height: 30px; }
+        .plant.stage-3 { height: 50px; }
+        .plant.stage-4 { height: 70px; }
+        .plant.stage-5 { height: 90px; }
 /* --- Celebration Effects --- */
         .confetti { position: fixed; top: -10px; width: 8px; height: 8px; pointer-events: none; z-index: 100; }
         @keyframes screen-shake { 0%,100% { transform: translate(0,0); } 20%,60% { transform: translate(-5px,5px); } 40%,80% { transform: translate(5px,-5px); } }
         .shake { animation: screen-shake 0.5s; }
-        .hat { position: absolute; top: -25px; left: 50%; transform: translateX(-50%); width: 60px; height: 20px; background: #333; border-radius: 10px 10px 0 0; }
-        .hat::after { content: ""; position: absolute; bottom: -6px; left: -10px; width: 80px; height: 8px; background: #333; border-radius: 4px; }
-        .scarf { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); width: 80px; height: 12px; background: #e53935; border-radius: 6px; }
 
         /* --- 성장 화분 --- */
         .plant-container { position: relative; width: 70px; height: 100px; }
@@ -358,6 +351,7 @@
         <button id="next-btn" class="font-jua text-xl sm:text-2xl bg-[#42A5F5] text-black px-8 py-3 rounded-full mt-8 transition-all duration-200 hover:scale-110 active:scale-95 hidden">Enter</button>
     </div>
 
+
     <!-- 캐릭터 -->
     <div class="fixed right-4 bottom-4 sm:right-8 sm:bottom-8 z-20 flex flex-col items-center">
         <div id="character-body" class="character-body">
@@ -568,7 +562,7 @@
                 completionStatus: {}, // 방문 시마다 진행 상태 초기화
                 incorrectNotes: loadData('quizIncorrectNotes', []),
                 currentExpression: 'normal',
-                characterOutfitStage: 0,
+                plantStage: 1,
                 idleTimeout: null,
                 lastTypeSoundTime: 0,
                 activeInputValue: null,
@@ -715,7 +709,7 @@
                 }
                 saveData('quizProgress', state.completionStatus);
                 renderKnowledgeMap();
-                updateCharacterGrowth();
+                updatePlantGrowth();
             }
             
             dom.gameUI.classList.add('hidden');
@@ -899,7 +893,7 @@
             const allDisabled = Array.from(dom.questionContainer.querySelectorAll('.quiz-input')).every(i => i.disabled);
             if (allDisabled) {
                 const quiz = state.activeQuizzes[state.currentQuizIndex];
-                advanceCharacterOutfit();
+                growPlant();
                 
                 const hasSecondWrong = Object.values(state.incorrectAttempts).some(v => v >= 2);
 
@@ -1068,7 +1062,7 @@
         }
 
         // =================================================================
-        // --- 캐릭터 & 지도 & 오답노트 제어 (Character & Map & Incorrect Note Control) ---
+        // --- 식물 & 지도 & 오답노트 제어 (Plant & Map & Incorrect Note Control) ---
         // =================================================================
         function resetIdleTimer() {
             clearTimeout(state.idleTimeout);
@@ -1076,39 +1070,38 @@
             state.idleTimeout = setTimeout(() => setCharExpression('idle'), config.IDLE_TIME);
         }
 
-        function moveEyes(e) {
-            dom.pupils.forEach(pupil => {
-                const eye = pupil.parentElement, rect = eye.getBoundingClientRect();
-                const angle = Math.atan2(e.clientY - (rect.top + rect.height / 2), e.clientX - (rect.left + rect.width / 2));
-                pupil.style.transform = `translate(-50%, -50%) translate(${Math.cos(angle) * 7}px, ${Math.sin(angle) * 7}px)`;
-            });
-        }
 
-        let expressionTimeout;
-        function setCharExpression(type) {
-            if (state.currentExpression === type && type !== 'wave' && type !== 'celebrate') return;
-            state.currentExpression = type;
 
-            clearTimeout(expressionTimeout);
-            dom.mouth.className = 'mouth';
-            dom.eyes.forEach(eye => eye.classList.remove('idle-eyes'));
-            dom.characterBody.classList.remove('idle');
+let expressionTimeout;
+function setCharExpression(type) {
+    if (state.currentExpression === type && type !== 'wave' && type !== 'celebrate') return;
+    state.currentExpression = type;
 
-            switch(type) {
-                case 'happy': dom.mouth.classList.add('happy'); break;
-                case 'worried': dom.mouth.classList.add('worried'); break;
-                case 'sad': dom.mouth.classList.add('sad'); break;
-                case 'idle':
-                    dom.characterBody.classList.add('idle');
-                    dom.eyes.forEach(eye => eye.classList.add('idle-eyes'));
-                    break;
-                case 'wave': case 'celebrate':
-                    dom.mouth.classList.add('happy');
-                    expressionTimeout = setTimeout(() => setCharExpression('normal'), 1500);
-                    break;
-                default: break;
-            }
-        }
+    clearTimeout(expressionTimeout);
+    dom.plantContainer.classList.remove('idle');
+    dom.plantContainer.style.transform = 'scale(1)';
+
+    switch(type) {
+        case 'happy':
+            dom.plantContainer.style.transform = 'scale(1.05)';
+            break;
+        case 'worried':
+        case 'sad':
+            dom.plantContainer.style.transform = 'scale(0.95)';
+            break;
+        case 'idle':
+            dom.plantContainer.classList.add('idle');
+            break;
+        case 'wave':
+        case 'celebrate':
+            dom.plantContainer.style.transform = 'scale(1.1)';
+            expressionTimeout = setTimeout(() => setCharExpression('idle'), 1500);
+            break;
+        default:
+            dom.plantContainer.style.transform = 'scale(1)';
+            break;
+    }
+}
         
         function populateCategoriesForRandomMode() {
             dom.categorySelect.innerHTML = ''; // Clear previous options
@@ -1222,7 +1215,7 @@
             dom.selectModeIncorrectBtn.textContent = `오답노트 (${incorrectNotes.length})`;
         }
 
-        function updateCharacterGrowth() {
+        function updatePlantGrowth() {
             const perfectCount = Object.values(state.completionStatus).filter(s => s === 'perfect').length;
             const totalCategories = allQuizzes.length;
             dom.characterBody.classList.remove('level-2', 'level-3');
@@ -1244,25 +1237,14 @@
             dom.plant.classList.add(`stage-${stage}`);
         }
 
-        function updateCharacterOutfit() {
-            const extras = dom.characterBody.querySelectorAll(".hat, .scarf");
-            extras.forEach(e => e.remove());
-            if (state.characterOutfitStage >= 1) {
-                const hat = document.createElement("div");
-                hat.className = "hat";
-                dom.characterBody.appendChild(hat);
-            }
-            if (state.characterOutfitStage >= 2) {
-                const scarf = document.createElement("div");
-                scarf.className = "scarf";
-                dom.characterBody.appendChild(scarf);
-            }
+        function updatePlantStage() {
+            dom.plant.className = `plant stage-${state.plantStage}`;
         }
 
-        function advanceCharacterOutfit() {
-            state.characterOutfitStage = (state.characterOutfitStage || 0) + 1;
-            if (state.characterOutfitStage > 2) state.characterOutfitStage = 2;
-            updateCharacterOutfit();
+        function growPlant() {
+            state.plantStage = (state.plantStage || 1) + 1;
+            if (state.plantStage > 5) state.plantStage = 5;
+            updatePlantStage();
         }
 
         // =================================================================
@@ -1456,10 +1438,8 @@
                 retryBtn: document.getElementById('retry-btn'),
                 mainMenuBtn: document.getElementById('main-menu-btn'),
                 homeBtn: document.getElementById('home-btn'),
-                characterBody: document.getElementById('character-body'),
-                eyes: document.querySelectorAll('.eye'),
-                pupils: document.querySelectorAll('.pupil'),
-                mouth: document.getElementById('mouth'),
+                plantContainer: document.getElementById('plant-container'),
+                plant: document.getElementById('plant'),
                 incorrectNoteScreen: document.getElementById('incorrect-note-screen'),
                 backToMainFromIncorrectBtn: document.getElementById('back-to-main-from-incorrect'),
                 incorrectListContainer: document.getElementById('incorrect-list-container'),
@@ -1478,9 +1458,9 @@
 
             initializeGlobalState();
             renderKnowledgeMap();
-            updateCharacterGrowth();
+            updatePlantGrowth();
             updateIncorrectNoteButton();
-            updateCharacterOutfit();
+            updatePlantStage();
             updateMoneyUI();
             
             const allButtons = document.querySelectorAll('button');
@@ -1566,7 +1546,6 @@
             dom.nextBtn.addEventListener('click', nextQuestion);
             dom.spinBtn.addEventListener('click', spinRoulette);
             
-            window.addEventListener('mousemove', moveEyes);
             document.addEventListener('keydown', handleEnterKey);
 
             dom.loadingScreen.classList.add('hidden');
