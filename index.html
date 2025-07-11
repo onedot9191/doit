@@ -268,6 +268,14 @@
         </div>
     </div>
 
+    <div id="choice-modal" class="absolute inset-0 bg-black/80 z-50 hidden flex flex-col items-center justify-center gap-6">
+        <h2 class="font-jua text-5xl text-white">보상 선택!</h2>
+        <div class="flex gap-4">
+            <button id="choice-money" class="font-jua text-3xl bg-yellow-400 text-black px-8 py-4 rounded-lg">+100,000원</button>
+            <button id="choice-multiplier" class="font-jua text-3xl bg-blue-400 text-black px-8 py-4 rounded-lg">다음 문제 점수 2배</button>
+        </div>
+    </div>
+
     <!-- 퀴즈 박스 -->
     <div id="quiz-box" class="w-full max-w-6xl bg-[#2d2d2d]/80 backdrop-blur-sm border border-white/50 rounded-2xl shadow-2xl p-8 sm:p-12 hidden relative">
         <div id="category-display" class="text-left font-jua text-xl text-cyan-400 mb-4 pb-2 border-b-2 border-cyan-400/50"></div>
@@ -436,6 +444,13 @@
                 oscillator: { type: 'fatsawtooth', count: 5, spread: 40 },
                 envelope: { attack: 0.01, decay: 1, sustain: 0.5, release: 1 },
                 volume: -8
+            }).toDestination(),
+            rouletteClickAlt: new Tone.MetalSynth({
+                frequency: 300,
+                envelope: { attack: 0.001, decay: 0.2, release: 0.1 },
+                harmonicity: 6,
+                modulationIndex: 30,
+                volume: -15
             }).toDestination()
         };
 
@@ -467,6 +482,11 @@
             state.correctlyAnsweredCount = 0;
             state.countedCorrectQIDs = new Set();
             state.reviewScheduledQIDs = new Set();
+            state.rouletteChanceMultiplier = state.rouletteChanceMultiplier || 1;
+            state.rouletteChanceTurnsLeft = state.rouletteChanceTurnsLeft || 0;
+            state.jackpotChanceBoost = state.jackpotChanceBoost || 0;
+            state.jackpotBoostTurnsLeft = state.jackpotBoostTurnsLeft || 0;
+            state.streakBonus = state.streakBonus || null;
         }
 
         function initializeGlobalState() {
@@ -480,6 +500,11 @@
                 idleTimeout: null,
                 lastTypeSoundTime: 0,
                 activeInputValue: null,
+                rouletteChanceMultiplier: 1,
+                rouletteChanceTurnsLeft: 0,
+                jackpotChanceBoost: 0,
+                jackpotBoostTurnsLeft: 0,
+                streakBonus: null,
                 ...state // 기존 상태 유지
             };
             saveData('money', 0);
@@ -822,7 +847,18 @@
                     triggerConfetti();
                     triggerScreenShake();
 
-                    if (Math.random() < config.ROULETTE_CHANCE) {
+                    if (state.streakBonus) {
+                        state.streakBonus.remaining--;
+                        if (state.streakBonus.remaining <= 0) {
+                            state.money += state.streakBonus.reward;
+                            showToast(`보너스 ${formatCurrency(state.streakBonus.reward)} 획득!`);
+                            updateMoneyUI();
+                            state.streakBonus = null;
+                        }
+                    }
+
+                    const chance = config.ROULETTE_CHANCE * state.rouletteChanceMultiplier;
+                    if (Math.random() < chance) {
                         setTimeout(showRoulette, 800);
                     } else {
                         setTimeout(() => {
@@ -832,6 +868,10 @@
                     }
                 } else if (hasSecondWrong) {
                     state.questionPerfectStatus[state.currentQuizIndex] = false;
+
+                    if (state.streakBonus) {
+                        state.streakBonus = null;
+                    }
 
                     const quiz = state.activeQuizzes[state.currentQuizIndex];
                     if (!quiz.isReview) {
@@ -847,6 +887,10 @@
                     }, 800);
                 } else {
                     state.questionPerfectStatus[state.currentQuizIndex] = false;
+
+                    if (state.streakBonus) {
+                        state.streakBonus = null;
+                    }
 
                     setTimeout(() => {
                         dom.nextBtn.classList.remove('hidden');
@@ -1132,6 +1176,10 @@ function setCharExpression(type) {
             { label: '자산 +50%', color: '#4FC3F7', type: 'percent', value: 0.50, weight: 3 },
             { label: '자산 +100%', color: '#FFD54F', type: 'percent', value: 1.00, weight: 2 },
             { label: 'JACKPOT!', color: '#FFEE58', type: 'add', value: 1000000, weight: 1 },
+            { label: '다음 CHANCE 2배', color: '#BA68C8', type: 'chanceBoost', value: 2, turns: 1, weight: 3 },
+            { label: 'JACKPOT 확률 +5%', color: '#9575CD', type: 'jackpotBoost', value: 0.05, turns: 1, weight: 2 },
+            { label: '3문제 연속 성공 시 +50,000', color: '#F06292', type: 'streak', value: 50000, streak: 3, weight: 4 },
+            { label: '보상 선택', color: '#D1C4E9', type: 'choice', weight: 10 },
         ];
         let isSpinning = false;
         
@@ -1161,10 +1209,16 @@ function setCharExpression(type) {
             dom.spinBtn.classList.remove('can-spin');
             dom.rouletteResult.textContent = '';
 
-            const totalWeight = rouletteItems.reduce((sum, item) => sum + item.weight, 0);
+            let items = rouletteItems.map(i => ({...i}));
+            if (state.jackpotChanceBoost > 0 && state.jackpotBoostTurnsLeft > 0) {
+                const baseTotal = items.reduce((s, it) => s + it.weight, 0);
+                const jackpot = items.find(it => it.label === 'JACKPOT!');
+                if (jackpot) jackpot.weight += baseTotal * state.jackpotChanceBoost;
+            }
+            const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
             let randomWeight = Math.random() * totalWeight;
             let resultItem;
-            for (const item of rouletteItems) {
+            for (const item of items) {
                 randomWeight -= item.weight;
                 if (randomWeight < 0) {
                     resultItem = item;
@@ -1190,15 +1244,26 @@ function setCharExpression(type) {
                 strip.style.transform = `translateY(${targetPosition}px)`;
             }, 100);
 
+            const clickSound = Math.random() < 0.5 ? sounds.rouletteClick : sounds.rouletteClickAlt;
             const clickInterval = setInterval(() => {
-                sounds.rouletteClick.triggerAttackRelease('8n', Tone.now());
+                clickSound.triggerAttackRelease('8n', Tone.now());
             }, 50);
 
             setTimeout(() => {
                 isSpinning = false;
                 clearInterval(clickInterval);
-                applyRouletteResult(resultItem, targetIndex);
-                setTimeout(hideRoulette, 2000);
+                const autoHide = applyRouletteResult(resultItem, targetIndex);
+                if (state.jackpotBoostTurnsLeft > 0) {
+                    state.jackpotBoostTurnsLeft--;
+                    if (state.jackpotBoostTurnsLeft === 0) state.jackpotChanceBoost = 0;
+                }
+                if (state.rouletteChanceTurnsLeft > 0) {
+                    state.rouletteChanceTurnsLeft--;
+                    if (state.rouletteChanceTurnsLeft === 0) state.rouletteChanceMultiplier = 1;
+                }
+                if (autoHide !== false) {
+                    setTimeout(hideRoulette, 2000);
+                }
             }, 1100);
         }
 
@@ -1227,19 +1292,41 @@ function setCharExpression(type) {
                 case 'add':
                     state.money += item.value;
                     resultText = `${formatCurrency(item.value)} ${item.value >= 0 ? '획득!' : '잃음...'}`;
+                    if (item.value >= 150000) triggerConfetti();
+                    if (item.value < 0) triggerScreenShake();
                     break;
                 case 'percent':
                     const change = Math.floor(state.money * item.value);
                     state.money += change;
                     resultText = `자산 ${item.value > 0 ? '+' : ''}${item.value * 100}% (${formatCurrency(change)})`;
+                    if (item.value >= 0.5) triggerConfetti();
+                    if (item.value < 0) triggerScreenShake();
                     break;
                 case 'multiplier':
                     state.moneyMultiplier = item.value;
                     state.multiplierTurnsLeft = item.turns;
                     resultText = `${item.turns}문제 동안 획득 자산 ${item.value}배!`;
                     break;
+                case 'chanceBoost':
+                    state.rouletteChanceMultiplier = item.value;
+                    state.rouletteChanceTurnsLeft = item.turns;
+                    resultText = `다음 CHANCE 확률 ${item.value}배!`;
+                    break;
+                case 'jackpotBoost':
+                    state.jackpotChanceBoost = item.value;
+                    state.jackpotBoostTurnsLeft = item.turns;
+                    resultText = `다음 SPIN JACKPOT 확률 +${item.value * 100}%`;
+                    break;
+                case 'streak':
+                    state.streakBonus = { remaining: item.streak, reward: item.value, streak: item.streak };
+                    resultText = `다음 ${item.streak}문제 연속 성공 시 ${formatCurrency(item.value)}!`;
+                    break;
+                case 'choice':
+                    showChoiceModal();
+                    return false;
                 case 'dud':
                     resultText = '아쉽지만... 꽝!';
+                    triggerScreenShake();
                     break;
             }
             
@@ -1274,6 +1361,15 @@ function setCharExpression(type) {
             dom.rouletteScreen.classList.remove('flex');
             dom.nextBtn.classList.remove('hidden');
             dom.nextBtn.focus();
+        }
+
+        function showChoiceModal() {
+            dom.choiceModal.classList.remove('hidden');
+        }
+
+        function hideChoiceModal() {
+            dom.choiceModal.classList.add('hidden');
+            hideRoulette();
         }
 
 
@@ -1321,6 +1417,9 @@ function setCharExpression(type) {
                 rouletteResult: document.getElementById('roulette-result'),
                 spinBtn: document.getElementById('spin-btn'),
                 reviewToast: document.getElementById('review-toast'),
+                choiceModal: document.getElementById('choice-modal'),
+                choiceMoney: document.getElementById('choice-money'),
+                choiceMultiplier: document.getElementById('choice-multiplier'),
             };
             const response = await fetch("data/quizzes.json");
             allQuizzes = await response.json();
@@ -1414,7 +1513,19 @@ function setCharExpression(type) {
             dom.homeBtn.addEventListener('click', returnToMainMenu);
             dom.nextBtn.addEventListener('click', nextQuestion);
             dom.spinBtn.addEventListener('click', spinRoulette);
-            
+            dom.choiceMoney.addEventListener('click', () => {
+                state.money += 100000;
+                updateMoneyUI();
+                showToast('+100,000원 획득!');
+                hideChoiceModal();
+            });
+            dom.choiceMultiplier.addEventListener('click', () => {
+                state.moneyMultiplier = 2;
+                state.multiplierTurnsLeft = 1;
+                showToast('다음 문제 점수 2배!');
+                hideChoiceModal();
+            });
+
             document.addEventListener('keydown', handleEnterKey);
 
             dom.loadingScreen.classList.add('hidden');
