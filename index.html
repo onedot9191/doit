@@ -24,7 +24,7 @@
         .input-wrapper { display: inline-block; position: relative; vertical-align: bottom; margin: 0 0.25rem; }
         .quiz-input {
             background: transparent; border: none; border-bottom: 2px solid #4B5563;
-            color: #E5E7EB; text-align: center; font-size: 1.25em; line-height: 1.5;
+            color: #E5E7EB; text-align: center; font-size: 1em; line-height: 1.5;
             padding: 4px 8px; min-width: 80px; transition: all 0.3s ease;
         }
         .quiz-input:focus { outline: none; border-bottom: 2px solid #42A5F5; }
@@ -844,6 +844,8 @@
                 const quiz = state.activeQuizzes[state.currentQuizIndex];
                 advanceCharacterOutfit();
                 
+                const hasSecondWrong = Object.values(state.incorrectAttempts).some(v => v >= 2);
+
                 if (state.isQuestionPerfect) {
                     state.questionPerfectStatus[state.currentQuizIndex] = true;
                     if (!state.countedCorrectQIDs.has(quiz.qid)) {
@@ -866,7 +868,7 @@
                             dom.nextBtn.focus();
                         }, 800);
                     }
-                } else {
+                } else if (hasSecondWrong) {
                     state.questionPerfectStatus[state.currentQuizIndex] = false;
 
                     const quiz = state.activeQuizzes[state.currentQuizIndex];
@@ -876,6 +878,13 @@
 
                     const reviewQuiz = { ...quiz, isReview: true };
                     state.activeQuizzes.splice(state.currentQuizIndex + 3, 0, reviewQuiz);
+
+                    setTimeout(() => {
+                        dom.nextBtn.classList.remove('hidden');
+                        dom.nextBtn.focus();
+                    }, 800);
+                } else {
+                    state.questionPerfectStatus[state.currentQuizIndex] = false;
 
                     setTimeout(() => {
                         dom.nextBtn.classList.remove('hidden');
