@@ -1409,14 +1409,8 @@ function setCharExpression(type) {
                 spinBtn: document.getElementById('spin-btn'),
                 reviewToast: document.getElementById('review-toast'),
             };
-            try {
-                const response = await fetch("data/quizzes.json");
-                allQuizzes = await response.json();
-            } catch (err) {
-                console.error('Failed to load quizzes', err);
-                dom.loadingScreen.innerHTML = '<div class="font-jua text-3xl text-red-500">퀴즈 데이터를 불러올 수 없습니다.</div>';
-                return;
-            }
+            const response = await fetch("data/quizzes.json");
+            allQuizzes = await response.json();
 
             initializeGlobalState();
             renderKnowledgeMap();
