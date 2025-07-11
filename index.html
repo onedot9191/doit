@@ -81,6 +81,59 @@
         @keyframes screen-shake { 0%,100% { transform: translate(0,0); } 20%,60% { transform: translate(-5px,5px); } 40%,80% { transform: translate(5px,-5px); } }
         .shake { animation: screen-shake 0.5s; }
 
+        /* --- 성장 화분 --- */
+        .plant-container { position: relative; width: 70px; height: 100px; }
+        .pot {
+            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 60px; height: 25px;
+            background: linear-gradient(to bottom, #8d6e63, #5d4037);
+            border: 3px solid #3e2723; border-top-width: 6px;
+            border-radius: 0 0 12px 12px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .plant {
+            position: absolute; bottom: 25px; left: 50%;
+            width: 8px; height: 40px;
+            background: linear-gradient(#66bb6a, #2e7d32);
+            border-radius: 4px;
+            transform-origin: bottom center;
+            transform: translateX(-50%) scale(0);
+            opacity: 0;
+            transition: transform 0.5s ease, opacity 0.5s;
+        }
+        .plant.stage-1 { transform: translateX(-50%) scale(0); opacity: 0; }
+        .plant.stage-2 { transform: translateX(-50%) scale(1); opacity: 1; }
+        .plant.stage-3 { transform: translateX(-50%) scale(1.2); opacity: 1; }
+        .plant::before {
+            content: '';
+            position: absolute; bottom: 10px; left: 50%;
+            width: 40px; height: 20px;
+            background-image:
+                radial-gradient(circle at left center, #66bb6a 0%, #388e3c 100%),
+                radial-gradient(circle at right center, #66bb6a 0%, #388e3c 100%);
+            background-size: 20px 20px;
+            background-repeat: no-repeat;
+            background-position: left center, right center;
+            transform: translateX(-50%) scale(0);
+            opacity: 0;
+            transition: transform 0.5s ease, opacity 0.5s;
+        }
+        .plant.stage-2::before, .plant.stage-3::before {
+            transform: translateX(-50%) scale(1);
+            opacity: 1;
+        }
+        .plant::after {
+            content: '';
+            position: absolute; bottom: 40px; left: 50%;
+            width: 16px; height: 16px;
+            background: radial-gradient(circle, #ffcc80 0%, #f57c00 100%);
+            border-radius: 50%;
+            transform: translateX(-50%) scale(0);
+            opacity: 0;
+            transition: transform 0.5s ease, opacity 0.5s;
+        }
+        .plant.stage-3::after { transform: translateX(-50%) scale(1); opacity: 1; }
+
         
         /* --- 지식 지도 & 오답 노트 --- */
         .map-section, .incorrect-note-section {
@@ -298,9 +351,17 @@
         <button id="next-btn" class="font-jua text-xl sm:text-2xl bg-[#42A5F5] text-black px-8 py-3 rounded-full mt-8 transition-all duration-200 hover:scale-110 active:scale-95 hidden">Enter</button>
     </div>
 
-    <!-- 식물 -->
-    <div class="fixed right-4 bottom-4 sm:right-8 sm:bottom-8 z-20">
-        <div id="plant-container" class="plant-container idle">
+
+    <!-- 캐릭터 -->
+    <div class="fixed right-4 bottom-4 sm:right-8 sm:bottom-8 z-20 flex flex-col items-center">
+        <div id="character-body" class="character-body">
+            <div class="eye-row">
+                <div class="eye"><div class="pupil"></div></div>
+                <div class="eye"><div class="pupil"></div></div>
+            </div>
+            <div id="mouth" class="mouth"></div>
+        </div>
+        <div class="plant-container mt-2">
             <div id="plant" class="plant stage-1"></div>
             <div class="pot"></div>
         </div>
@@ -1157,16 +1218,23 @@ function setCharExpression(type) {
         function updatePlantGrowth() {
             const perfectCount = Object.values(state.completionStatus).filter(s => s === 'perfect').length;
             const totalCategories = allQuizzes.length;
-            dom.plantContainer.style.setProperty('--scale', 1);
-            dom.plantContainer.classList.remove('level-2', 'level-3');
+            dom.characterBody.classList.remove('level-2', 'level-3');
+            dom.characterBody.style.setProperty('--scale', 1);
+            dom.plant.classList.remove('stage-2', 'stage-3');
+
+            let stage = 1;
 
             if (perfectCount / totalCategories >= 0.8) {
-                dom.plantContainer.classList.add('level-3');
-                dom.plantContainer.style.setProperty('--scale', 1.2);
+                dom.characterBody.classList.add('level-3');
+                dom.characterBody.style.setProperty('--scale', 1.2);
+                stage = 3;
             } else if (perfectCount / totalCategories >= 0.4) {
-                dom.plantContainer.classList.add('level-2');
-                dom.plantContainer.style.setProperty('--scale', 1.1);
+                dom.characterBody.classList.add('level-2');
+                dom.characterBody.style.setProperty('--scale', 1.1);
+                stage = 2;
             }
+
+            dom.plant.classList.add(`stage-${stage}`);
         }
 
         function updatePlantStage() {
@@ -1383,6 +1451,7 @@ function setCharExpression(type) {
                 rouletteResult: document.getElementById('roulette-result'),
                 spinBtn: document.getElementById('spin-btn'),
                 reviewToast: document.getElementById('review-toast'),
+                plant: document.getElementById('plant'),
             };
             const response = await fetch("data/quizzes.json");
             allQuizzes = await response.json();
