@@ -51,12 +51,48 @@
         }
         .perfect-message.fade-out { animation: perfect-fade-out 0.5s ease-in forwards; }
 
-        #money-container{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:10;}
-        #money-pile{position:fixed;bottom:0;left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:0.25rem;padding-bottom:1rem;pointer-events:none;z-index:10;}
-        .money-fall{position:fixed;top:-50px;font-size:2rem;pointer-events:none;animation:money-fall 1s linear forwards;}
-        @keyframes money-fall{to{transform:translateY(100vh);}}
-        .money-pile-item{font-size:2rem;}
 
+        /* --- 식물 --- */
+        .plant-container {
+            width: 120px; height: 150px; position: relative;
+            display: flex; justify-content: center; align-items: flex-end;
+            transition: transform 0.3s ease-in-out;
+        }
+        .plant-container.level-2 { transform: scale(1.1); }
+        .plant-container.level-3 { transform: scale(1.2); }
+        @keyframes idle-bounce { 0%,100% { transform: translateY(0) scale(var(--scale,1)); } 50% { transform: translateY(-5px) scale(var(--scale,1)); } }
+        .plant-container.idle { animation: idle-bounce 1.5s ease-in-out infinite; }
+        .plant {
+            position: relative;
+            width: 24px;
+            background: linear-gradient(to bottom, #a5f1ff, #7ed957);
+            border-radius: 12px 12px 6px 6px;
+            transition: height 0.3s ease;
+        }
+        .plant::before, .plant::after {
+            content: '';
+            position: absolute;
+            width: 18px; height: 12px;
+            background: #7ed957;
+            border-radius: 50%;
+            top: -6px;
+        }
+        .plant::before { left: -10px; transform: rotate(-20deg); }
+        .plant::after { right: -10px; transform: rotate(20deg); }
+        .pot {
+            width: 64px; height: 24px; background: #d39e72;
+            border-radius: 5px 5px 0 0; position: absolute; bottom: 0;
+            left: 50%; transform: translateX(-50%);
+        }
+        .plant.stage-1 { height: 12px; }
+        .plant.stage-2 { height: 30px; }
+        .plant.stage-3 { height: 48px; }
+        .plant.stage-4 { height: 66px; }
+        .plant.stage-5 { height: 84px; }
+        .plant.stage-6 { height: 102px; }
+        .plant.stage-7 { height: 120px; }
+        .plant.stage-8 { height: 138px; }
+/* --- Celebration Effects --- */
         .confetti { position: fixed; top: -10px; width: 8px; height: 8px; pointer-events: none; z-index: 100; }
         @keyframes screen-shake { 0%,100% { transform: translate(0,0); } 20%,60% { transform: translate(-5px,5px); } 40%,80% { transform: translate(5px,-5px); } }
         .shake { animation: screen-shake 0.5s; }
@@ -278,9 +314,14 @@
         <button id="next-btn" class="font-jua text-xl sm:text-2xl bg-[#42A5F5] text-black px-8 py-3 rounded-full mt-8 transition-all duration-200 hover:scale-110 active:scale-95 hidden">Enter</button>
     </div>
 
-    <!-- 돈 이펙트 -->
-    <div id="money-container" class="pointer-events-none fixed inset-0 overflow-hidden z-10"></div>
-    <div id="money-pile" class="pointer-events-none fixed bottom-0 left-1/2 -translate-x-1/2 flex flex-wrap justify-center items-end gap-1 pb-8 z-10"></div>
+    <!-- 식물 -->
+    <div class="fixed right-4 bottom-4 sm:right-8 sm:bottom-8 z-20">
+        <div id="plant-container" class="plant-container idle">
+            <div id="plant" class="plant stage-1"></div>
+            <div class="pot"></div>
+        </div>
+    </div>
+
     <!-- 시작/완료/오답노트 오버레이 -->
     <div id="start-screen" class="absolute inset-0 bg-black/80 flex flex-col justify-center items-center z-10 text-center p-4 overflow-y-auto">
         <div class="w-full max-w-6xl">
@@ -478,6 +519,7 @@
                 completionStatus: {}, // 방문 시마다 진행 상태 초기화
                 incorrectNotes: loadData('quizIncorrectNotes', []),
                 currentExpression: 'normal',
+                plantStage: 1,
                 idleTimeout: null,
                 lastTypeSoundTime: 0,
                 activeInputValue: null,
@@ -624,6 +666,7 @@
                 }
                 saveData('quizProgress', state.completionStatus);
                 renderKnowledgeMap();
+                updatePlantGrowth();
             }
             
             dom.gameUI.classList.add('hidden');
@@ -787,7 +830,6 @@
                 state.money += earnings;
                 saveData('money', state.money);
                 showMoneyUpAnimation(input, `+${formatCurrency(earnings)}`);
-                dropMoney(earnings);
                 updateMoneyUI();
             } else {
                 state.isQuestionPerfect = false;
@@ -808,6 +850,7 @@
             const allDisabled = Array.from(dom.questionContainer.querySelectorAll('.quiz-input')).every(i => i.disabled);
             if (allDisabled) {
                 const quiz = state.activeQuizzes[state.currentQuizIndex];
+                growPlant();
                 
                 const hasSecondWrong = Object.values(state.incorrectAttempts).some(v => v >= 2);
 
@@ -904,9 +947,8 @@
             return new Intl.NumberFormat('ko-KR').format(num) + '원';
         }
 
-        function updateMoneyUI() {
-            dom.money.textContent = formatCurrency(state.money);
-            updateMoneyPile();
+        function updateMoneyUI() { 
+            dom.money.textContent = formatCurrency(state.money); 
         }
 
         function updateProgressUI() {
@@ -927,8 +969,6 @@
         }
         
         function showMoneyUpAnimation(target, text) {
-                dropMoney(earnings);
-
             const el = document.createElement('div');
             el.className = 'score-up-animation text-yellow-400';
             el.textContent = text;
@@ -940,32 +980,7 @@
             setTimeout(() => el.remove(), 800);
         }
 
-function addMoneyToPile() {
-    const el = document.createElement("div");
-    el.className = "money-pile-item";
-    el.textContent = "\ud83d\udcb5";
-    dom.moneyPile.appendChild(el);
-}
 
-function dropMoney(amount) {
-    const count = Math.min(5, Math.max(1, Math.floor(amount / 10000)));
-    for (let i = 0; i < count; i++) {
-        const m = document.createElement("div");
-        m.className = "money-fall";
-        m.textContent = "\ud83d\udcb5";
-        m.style.left = Math.random() * window.innerWidth + "px";
-        dom.moneyContainer.appendChild(m);
-        m.addEventListener("animationend", () => { m.remove(); addMoneyToPile(); });
-    }
-}
-
-function updateMoneyPile() {
-    dom.moneyPile.innerHTML = "";
-    const count = Math.min(50, Math.floor(state.money / 10000));
-    for (let i = 0; i < count; i++) {
-        addMoneyToPile();
-    }
-}
         function showPerfectMessage() {
             const perfectEl = document.createElement('div');
             perfectEl.textContent = "Perfect!";
@@ -1016,9 +1031,40 @@ function updateMoneyPile() {
 
 let expressionTimeout;
 function setCharExpression(type) {
-    // no-op since plant is removed
-}
+    if (state.currentExpression === type && type !== 'wave' && type !== 'celebrate') return;
+    state.currentExpression = type;
 
+    clearTimeout(expressionTimeout);
+    dom.plantContainer.classList.remove('idle');
+    dom.plantContainer.style.transform = 'scale(1)';
+
+    switch(type) {
+        case 'happy':
+            dom.plantContainer.style.transform = 'scale(1.05)';
+            break;
+        case 'worried':
+        case 'sad':
+            dom.plantContainer.style.transform = 'scale(0.95)';
+            break;
+        case 'idle':
+            dom.plantContainer.classList.add('idle');
+            break;
+        case 'wave':
+        case 'celebrate':
+            dom.plantContainer.style.transform = 'scale(1.1)';
+            expressionTimeout = setTimeout(() => setCharExpression('idle'), 1500);
+            break;
+        default:
+            dom.plantContainer.style.transform = 'scale(1)';
+            break;
+    }
+}
+        
+        function populateCategoriesForRandomMode() {
+            dom.categorySelect.innerHTML = ''; // Clear previous options
+
+            const totalCount = allQuizzes.reduce((sum, cat) => sum + cat.questions.length, 0);
+            const chongronCount = allQuizzes.filter(c => c.category.startsWith('총론')).reduce((sum, cat) => sum + cat.questions.length, 0);
             const changcheCount = allQuizzes.filter(c => c.category.startsWith('창의적 체험활동')).reduce((sum, cat) => sum + cat.questions.length, 0);
 
             const scopeOptions = [
@@ -1126,6 +1172,31 @@ function setCharExpression(type) {
             dom.selectModeIncorrectBtn.textContent = `오답노트 (${incorrectNotes.length})`;
         }
 
+        function updatePlantGrowth() {
+            const perfectCount = Object.values(state.completionStatus).filter(s => s === 'perfect').length;
+            const totalCategories = allQuizzes.length;
+            dom.plantContainer.style.setProperty('--scale', 1);
+            dom.plantContainer.classList.remove('level-2', 'level-3');
+
+            if (perfectCount / totalCategories >= 0.8) {
+                dom.plantContainer.classList.add('level-3');
+                dom.plantContainer.style.setProperty('--scale', 1.2);
+            } else if (perfectCount / totalCategories >= 0.4) {
+                dom.plantContainer.classList.add('level-2');
+                dom.plantContainer.style.setProperty('--scale', 1.1);
+            }
+        }
+
+        function updatePlantStage() {
+            dom.plant.className = `plant stage-${state.plantStage}`;
+        }
+
+        function growPlant() {
+            state.plantStage = (state.plantStage || 1) + 1;
+            if (state.plantStage > 8) state.plantStage = 8;
+            updatePlantStage();
+        }
+
         // =================================================================
         // --- 룰렛 로직 (Roulette Logic) ---
         // =================================================================
@@ -1141,6 +1212,7 @@ function setCharExpression(type) {
             { label: '2배 (3문제)', color: '#FFB74D', type: 'multiplier', value: 2, turns: 3, weight: 3 },
             { label: '자산 +50%', color: '#4FC3F7', type: 'percent', value: 0.50, weight: 3 },
             { label: '자산 +100%', color: '#FFD54F', type: 'percent', value: 1.00, weight: 2 },
+            { label: '식물 성장!', color: '#BA68C8', type: 'plant', value: 1, weight: 6 },
             { label: 'JACKPOT!', color: '#FFEE58', type: 'add', value: 1000000, weight: 1 },
         ];
         let isSpinning = false;
@@ -1236,19 +1308,21 @@ function setCharExpression(type) {
             switch(item.type) {
                 case 'add':
                     state.money += item.value;
-                    dropMoney(item.value);
                     resultText = `${formatCurrency(item.value)} ${item.value >= 0 ? '획득!' : '잃음...'}`;
                     break;
                 case 'percent':
                     const change = Math.floor(state.money * item.value);
                     state.money += change;
-                    dropMoney(change);
                     resultText = `자산 ${item.value > 0 ? '+' : ''}${item.value * 100}% (${formatCurrency(change)})`;
                     break;
                 case 'multiplier':
                     state.moneyMultiplier = item.value;
                     state.multiplierTurnsLeft = item.turns;
                     resultText = `${item.turns}문제 동안 획득 자산 ${item.value}배!`;
+                    break;
+                case 'plant':
+                    growPlant();
+                    resultText = '식물이 한 단계 자랐어요!';
                     break;
                 case 'dud':
                     resultText = '아쉽지만... 꽝!';
@@ -1321,8 +1395,8 @@ function setCharExpression(type) {
                 retryBtn: document.getElementById('retry-btn'),
                 mainMenuBtn: document.getElementById('main-menu-btn'),
                 homeBtn: document.getElementById('home-btn'),
-                moneyContainer: document.getElementById("money-container"),
-                moneyPile: document.getElementById("money-pile"),
+                plantContainer: document.getElementById('plant-container'),
+                plant: document.getElementById('plant'),
                 incorrectNoteScreen: document.getElementById('incorrect-note-screen'),
                 backToMainFromIncorrectBtn: document.getElementById('back-to-main-from-incorrect'),
                 incorrectListContainer: document.getElementById('incorrect-list-container'),
@@ -1346,7 +1420,9 @@ function setCharExpression(type) {
 
             initializeGlobalState();
             renderKnowledgeMap();
+            updatePlantGrowth();
             updateIncorrectNoteButton();
+            updatePlantStage();
             updateMoneyUI();
             
             const allButtons = document.querySelectorAll('button');
