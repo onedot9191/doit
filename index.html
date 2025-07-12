@@ -415,6 +415,7 @@
         // Tier multipliers for rewards and jackpot probability
         const TIER_REWARD_MULTIPLIER = { C: 1, B: 1.5, A: 2, S: 3 };
         const TIER_JACKPOT_CHANCE = { C: 0.01, B: 0.03, A: 0.05, S: 0.07 };
+        const ROULETTE_UPGRADE_CHANCE = { C: 0.3, B: 0.2, A: 0.1 };
 
         const STAR_SVG_TEMPLATE = `<svg class="knowledge-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z"/></svg>`;
         const SPARKLE_SVG_TEMPLATE = `<svg class="knowledge-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L9.5 9.5L2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z"/></svg>`;
@@ -1272,69 +1273,74 @@ function setCharExpression(type) {
             dom.spinBtn.classList.remove('can-spin');
             dom.rouletteResult.textContent = '';
 
-            const filtered = rouletteItems.filter(i => i.tier === state.currentRouletteTier);
-            let items = filtered.map(i => ({ ...i }));
+            const target = determineUpgradeTarget();
+            animateRouletteUpgrade(target, performSpin);
 
-            const jackpot = items.find(it => it.label === 'JACKPOT!');
-            const othersTotal = items.reduce((s, it) => s + (it === jackpot ? 0 : it.weight), 0);
-            if (jackpot) {
-                let chance = TIER_JACKPOT_CHANCE[state.currentRouletteTier] || 0.01;
-                if (state.jackpotChanceBoost > 0 && state.jackpotBoostTurnsLeft > 0) {
-                    chance += state.jackpotChanceBoost;
+            function performSpin() {
+                const filtered = rouletteItems.filter(i => i.tier === state.currentRouletteTier);
+                let items = filtered.map(i => ({ ...i }));
+
+                const jackpot = items.find(it => it.label === 'JACKPOT!');
+                const othersTotal = items.reduce((s, it) => s + (it === jackpot ? 0 : it.weight), 0);
+                if (jackpot) {
+                    let chance = TIER_JACKPOT_CHANCE[state.currentRouletteTier] || 0.01;
+                    if (state.jackpotChanceBoost > 0 && state.jackpotBoostTurnsLeft > 0) {
+                        chance += state.jackpotChanceBoost;
+                    }
+                    chance += state.jackpotChancePermanentBoost;
+                    jackpot.weight = othersTotal * chance;
                 }
-                chance += state.jackpotChancePermanentBoost;
-                jackpot.weight = othersTotal * chance;
+                const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+                let randomWeight = Math.random() * totalWeight;
+                let resultItem;
+                for (const item of items) {
+                    randomWeight -= item.weight;
+                    if (randomWeight < 0) {
+                        resultItem = item;
+                        break;
+                    }
+                }
+
+                const reel = dom.reels[0];
+                if (!reel) return;
+                const strip = reel.querySelector('.reel-strip');
+                if (!strip) return;
+
+                strip.style.transition = 'none';
+                strip.style.transform = 'translateY(0)';
+
+                const resultIndex = filtered.findIndex(item => item.label === resultItem.label);
+                const targetIndex = filtered.length + (resultIndex === -1 ? 0 : resultIndex);
+
+                setTimeout(() => {
+                    const spinDuration = 1.0; // seconds
+                    strip.style.transition = `transform ${spinDuration}s cubic-bezier(0.25, 0.1, 0.25, 1)`;
+                    const targetPosition = -targetIndex * 120;
+                    strip.style.transform = `translateY(${targetPosition}px)`;
+                }, 100);
+
+                const clickSound = Math.random() < 0.5 ? sounds.rouletteClick : sounds.rouletteClickAlt;
+                const clickInterval = setInterval(() => {
+                    clickSound.triggerAttackRelease('8n', Tone.now());
+                }, 50);
+
+                setTimeout(() => {
+                    isSpinning = false;
+                    clearInterval(clickInterval);
+                    const autoHide = applyRouletteResult(resultItem, targetIndex);
+                    if (state.jackpotBoostTurnsLeft > 0) {
+                        state.jackpotBoostTurnsLeft--;
+                        if (state.jackpotBoostTurnsLeft === 0) state.jackpotChanceBoost = 0;
+                    }
+                    if (state.rouletteChanceTurnsLeft > 0) {
+                        state.rouletteChanceTurnsLeft--;
+                        if (state.rouletteChanceTurnsLeft === 0) state.rouletteChanceMultiplier = 1;
+                    }
+                    if (autoHide !== false) {
+                        setTimeout(hideRoulette, 2000);
+                    }
+                }, 1100);
             }
-            const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
-            let randomWeight = Math.random() * totalWeight;
-            let resultItem;
-            for (const item of items) {
-                randomWeight -= item.weight;
-                if (randomWeight < 0) {
-                    resultItem = item;
-                    break;
-                }
-            }
-
-            const reel = dom.reels[0];
-            if (!reel) return;
-            const strip = reel.querySelector('.reel-strip');
-            if (!strip) return;
-
-            strip.style.transition = 'none';
-            strip.style.transform = 'translateY(0)';
-            
-            const resultIndex = filtered.findIndex(item => item.label === resultItem.label);
-            const targetIndex = filtered.length + (resultIndex === -1 ? 0 : resultIndex);
-
-            setTimeout(() => {
-                const spinDuration = 1.0; // seconds
-                strip.style.transition = `transform ${spinDuration}s cubic-bezier(0.25, 0.1, 0.25, 1)`;
-                const targetPosition = -targetIndex * 120;
-                strip.style.transform = `translateY(${targetPosition}px)`;
-            }, 100);
-
-            const clickSound = Math.random() < 0.5 ? sounds.rouletteClick : sounds.rouletteClickAlt;
-            const clickInterval = setInterval(() => {
-                clickSound.triggerAttackRelease('8n', Tone.now());
-            }, 50);
-
-            setTimeout(() => {
-                isSpinning = false;
-                clearInterval(clickInterval);
-                const autoHide = applyRouletteResult(resultItem, targetIndex);
-                if (state.jackpotBoostTurnsLeft > 0) {
-                    state.jackpotBoostTurnsLeft--;
-                    if (state.jackpotBoostTurnsLeft === 0) state.jackpotChanceBoost = 0;
-                }
-                if (state.rouletteChanceTurnsLeft > 0) {
-                    state.rouletteChanceTurnsLeft--;
-                    if (state.rouletteChanceTurnsLeft === 0) state.rouletteChanceMultiplier = 1;
-                }
-                if (autoHide !== false) {
-                    setTimeout(hideRoulette, 2000);
-                }
-            }, 1100);
         }
 
         function applyRouletteResult(item, targetIndex) {
@@ -1437,12 +1443,19 @@ function setCharExpression(type) {
             setTimeout(() => overlay.remove(), 2000);
         }
 
-        function determineRouletteTier() {
-            const r = Math.random();
-            if (r < 0.05) return 'S';
-            if (r < 0.15) return 'A';
-            if (r < 0.45) return 'B';
-            return 'C';
+        function determineUpgradeTarget() {
+            const tiers = ['C','B','A','S'];
+            let index = tiers.indexOf(state.currentRouletteTier);
+            while (index < tiers.length - 1) {
+                const tier = tiers[index];
+                const chance = ROULETTE_UPGRADE_CHANCE[tier] || 0;
+                if (Math.random() < chance) {
+                    index++;
+                } else {
+                    break;
+                }
+            }
+            return tiers[index];
         }
 
         function applyRouletteTierClass() {
@@ -1450,14 +1463,13 @@ function setCharExpression(type) {
             dom.rouletteScreen.classList.add('roulette-tier-' + state.currentRouletteTier.toLowerCase());
         }
 
-        function animateRouletteUpgrade(target) {
+        function animateRouletteUpgrade(target, onComplete) {
             const tiers = ['C','B','A','S'];
             let currentIndex = tiers.indexOf(state.currentRouletteTier);
             const targetIndex = tiers.indexOf(target);
             function step() {
                 if (currentIndex >= targetIndex) {
-                    dom.spinBtn.disabled = false;
-                    dom.spinBtn.classList.add('can-spin');
+                    if (onComplete) onComplete();
                     return;
                 }
                 currentIndex++;
@@ -1476,10 +1488,9 @@ function setCharExpression(type) {
             state.currentRouletteTier = 'C';
             applyRouletteTierClass();
             setupSlotMachine('C');
-            dom.spinBtn.disabled = true;
-            dom.spinBtn.classList.remove('can-spin');
-            const target = determineRouletteTier();
-            animateRouletteUpgrade(target);
+            dom.spinBtn.disabled = false;
+            dom.spinBtn.classList.add('can-spin');
+            dom.rouletteResult.textContent = '';
         }
 
         function hideRoulette() {
