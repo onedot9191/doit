@@ -659,6 +659,10 @@
         }
 
         function nextQuestion() {
+            if (state.multiplierTurnsLeft > 0) {
+                state.multiplierTurnsLeft--;
+                if (state.multiplierTurnsLeft === 0) state.moneyMultiplier = 1;
+            }
             state.currentQuizIndex++;
             if (state.currentQuizIndex < state.activeQuizzes.length) {
                 dom.nextBtn.classList.add('hidden');
