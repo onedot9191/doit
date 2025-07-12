@@ -31,13 +31,13 @@
         .quiz-input.correct { border-bottom: 2px solid #66BB6A; color: #66BB6A; }
         .quiz-input.incorrect-1 { border-bottom: 2px solid #F97316; }
         .quiz-input.incorrect-2 { border-bottom: 2px solid #EF5350; color: #EF5350; }
-        
+
         #question-container { color: #E5E7EB; line-height: 2; text-align: left; }
 
         /* --- 애니메이션 및 효과 --- */
         @keyframes wobble { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
         .wobble { animation: wobble 0.3s ease-in-out; }
-        
+
         @keyframes score-up { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-30px) scale(1.5); opacity: 0; } }
         .score-up-animation { position: absolute; font-weight: bold; animation: score-up 0.8s ease-out; pointer-events: none; }
 
@@ -65,7 +65,7 @@
         @keyframes screen-shake { 0%,100% { transform: translate(0,0); } 20%,60% { transform: translate(-5px,5px); } 40%,80% { transform: translate(5px,-5px); } }
         .shake { animation: screen-shake 0.5s; }
 
-        
+
         /* --- 지식 지도 & 오답 노트 --- */
         .map-section, .incorrect-note-section {
             width: 100%;
@@ -107,7 +107,7 @@
         }
 
         .star-label { font-size: 0.8rem; text-align: center; margin-top: 0.5rem; color: #d1d5db; word-break: keep-all; }
-        
+
         .incorrect-item {
             background-color: #2d2d2d;
             padding: 1rem;
@@ -229,7 +229,7 @@
         #spin-btn.can-spin {
             animation: flash 1.5s infinite;
         }
-        
+
         #review-toast {
             transition: opacity 0.5s, transform 0.5s;
         }
@@ -272,7 +272,7 @@
     </style>
 </head>
 <body class="w-screen h-screen flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto">
-    
+
     <!-- 로딩 오버레이 -->
     <div id="loading-screen" class="absolute inset-0 bg-black/90 flex flex-col justify-center items-center z-50">
         <div class="font-jua text-3xl text-white animate-pulse">로딩 중...</div>
@@ -356,7 +356,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="incorrect-note-screen" class="absolute inset-0 bg-black/80 hidden flex-col justify-center items-center z-10 text-center p-4">
         <div class="w-full max-w-6xl h-full flex flex-col">
             <button id="back-to-main-from-incorrect" class="absolute top-4 left-4 font-jua text-xl bg-gray-600 px-4 py-2 rounded-full">&lt; 뒤로</button>
@@ -425,8 +425,8 @@
         ];
         // 전체 171개 문항 데이터는 data/quizzes.json에서 불러옵니다.
         let allQuizzes = [];
-        
-        
+
+
         const sounds = {
             coin: new Tone.Synth({
                 oscillator: { type: 'square' },
@@ -568,7 +568,7 @@
         function saveData(key, value) {
             localStorage.setItem(key, JSON.stringify(value));
         }
-        
+
         function addIncorrectNote(qid) {
             const incorrectNotes = loadData('quizIncorrectNotes', []);
             if (!incorrectNotes.includes(qid)) {
@@ -602,28 +602,28 @@
 
         async function startQuiz(quizList, mode, categoryIndex = null) {
             if (Tone.context.state !== 'running') { await Tone.start(); }
-            
+
             if (state.idleTimeout) clearTimeout(state.idleTimeout);
 
             resetQuizState();
             state.gameMode = mode;
             state.selectedCategoryIndex = categoryIndex;
-            
+
             if (!quizList || quizList.length === 0) {
                 showToast("풀어볼 문제가 없습니다!");
                 return;
             }
-            
+
             state.activeQuizzes = [...quizList];
             state.initialQuizCount = quizList.length;
-            state.lastQuizList = [...quizList]; 
+            state.lastQuizList = [...quizList];
 
             if (state.gameMode === 'random' || state.gameMode === 'incorrect') {
                 shuffleArray(state.activeQuizzes);
             }
 
             updateMoneyUI();
-            
+
             dom.startScreen.classList.add('hidden');
             dom.incorrectNoteScreen.classList.add('hidden');
             dom.incorrectNoteScreen.classList.remove('flex');
@@ -634,11 +634,11 @@
             dom.nextBtn.classList.add('hidden');
             dom.totalQ.textContent = state.initialQuizCount;
             dom.currentQ.textContent = 0;
-            
+
             setCharExpression('wave');
             renderQuestion();
         }
-        
+
         function retryGame() {
             startQuiz(state.lastQuizList, state.gameMode, state.selectedCategoryIndex);
         }
@@ -675,7 +675,7 @@
             if (state.gameMode === 'sequential' && state.selectedCategoryIndex !== null) {
                 const numericIndex = parseInt(state.selectedCategoryIndex);
                 const currentStatus = state.completionStatus[numericIndex] || 'unlocked';
-                
+
                 const allOriginalQuestions = state.lastQuizList;
                 const allOriginalQIDs = new Set(allOriginalQuestions.map(q => q.qid));
                 const allAnsweredCorrectly = [...allOriginalQIDs].every(qid => state.countedCorrectQIDs.has(qid));
@@ -688,14 +688,14 @@
                 saveData('quizProgress', state.completionStatus);
                 renderKnowledgeMap();
             }
-            
+
             dom.gameUI.classList.add('hidden');
             dom.quizBox.classList.add('hidden');
             dom.finalMoney.textContent = formatCurrency(state.money);
-            
+
             dom.endScreen.classList.remove('hidden');
             dom.endScreen.classList.add('flex');
-            
+
             setCharExpression('celebrate');
         }
 
@@ -707,14 +707,14 @@
             state.isQuestionPerfect = true;
             state.incorrectAttempts = {};
             setCharExpression('normal');
-            
+
             const quiz = state.activeQuizzes[state.currentQuizIndex];
             let categoryText = quiz.detailedCategory;
             if (quiz.isReview) {
                 categoryText = `<span class="text-red-400">[복습]</span> ${categoryText}`;
             }
             dom.categoryDisplay.innerHTML = categoryText;
-            
+
             dom.questionContainer.classList.remove('text-3xl', 'sm:text-4xl', 'text-2xl', 'sm:text-3xl', 'text-xl', 'sm:text-2xl', 'text-lg', 'sm:text-xl');
             if (quiz.question.length > 200) { dom.questionContainer.classList.add('text-xl', 'sm:text-2xl'); }
             else if (quiz.question.length > 150) { dom.questionContainer.classList.add('text-2xl', 'sm:text-3xl'); }
@@ -723,7 +723,7 @@
             dom.questionContainer.innerHTML = '';
 
             const parts = quiz.question.split(/(\{\d+\})/g).filter(p => p);
-            
+
             parts.forEach(part => {
                 const match = part.match(/\{(\d+)\}/);
                 if (match) {
@@ -759,11 +759,11 @@
             resetIdleTimer();
             updateProgressUI();
         }
-        
+
         // =================================================================
         // --- 입력 및 정답 처리 (Input & Answer Handling) ---
         // =================================================================
-        
+
         function normalizeAnswer(str) {
             if (typeof str !== 'string') return '';
             return str.replace(/\s|·|⋅|,/g, ''); // 공백, 쉼표, 모든 종류의 가운뎃점 제거
@@ -779,7 +779,7 @@
 
             if (normalizedAnswer.startsWith(normalizedValue)) {
                 setCharExpression('happy');
-                
+
                 const now = performance.now();
                 if (now - state.lastTypeSoundTime > config.SOUND_THROTTLE_TIME) {
                     sounds.type.triggerAttackRelease('C5', '32n', Tone.now());
@@ -791,11 +791,11 @@
             }
             state.idleTimeout = setTimeout(() => setCharExpression('idle'), config.IDLE_TIME);
         }
-        
+
         function checkAnswerOnSubmit(input) {
             if (input.disabled) return;
             resetIdleTimer();
-            
+
             const answer = input.dataset.answer;
             const index = parseInt(input.id.split('-')[1]);
             const normalizedUserValue = normalizeAnswer(input.value);
@@ -805,7 +805,7 @@
                  handleCorrectAnswer(input);
             } else {
                 state.isQuestionPerfect = false;
-                
+
                 state.incorrectAttempts[index] = (state.incorrectAttempts[index] || 0) + 1;
 
                 if (state.incorrectAttempts[index] === 1) {
@@ -828,13 +828,13 @@
                 }
             }
         }
-        
+
         function handleCorrectAnswer(input) {
             setCharExpression('happy');
             spawnAnimal();
 
             sounds.coin.triggerAttackRelease('B5', '16n', Tone.now());
-            
+
             const index = parseInt(input.id.split('-')[1]);
             input.value = input.dataset.answer;
             updateInputWidth(input);
@@ -848,7 +848,7 @@
                     earnings *= state.moneyMultiplier;
                 }
                 earnings = Math.floor(earnings);
-                
+
                 state.money += earnings;
                 saveData('money', state.money);
                 showMoneyUpAnimation(input, `+${formatCurrency(earnings)}`);
@@ -864,7 +864,7 @@
                     removeIncorrectNote(quiz.qid);
                 }
             }
-            
+
             focusNextInput(index);
         }
 
@@ -872,7 +872,7 @@
             const allDisabled = Array.from(dom.questionContainer.querySelectorAll('.quiz-input')).every(i => i.disabled);
             if (allDisabled) {
                 const quiz = state.activeQuizzes[state.currentQuizIndex];
-                
+
                 const hasSecondWrong = Object.values(state.incorrectAttempts).some(v => v >= 2);
 
                 if (state.isQuestionPerfect) {
@@ -881,7 +881,7 @@
                         state.countedCorrectQIDs.add(quiz.qid);
                     }
                     updateProgressUI();
-                    
+
                     const perfectNotes = ['C5', 'E5', 'G5', 'C6'];
                     sounds.perfect.triggerAttackRelease(perfectNotes, '8n', Tone.now());
                     showPerfectMessage();
@@ -967,7 +967,7 @@
         }
 
         function handleFocus(e) { state.activeInputValue = e.target.value; }
-        
+
         function focusNextInput(currentIndex) {
             const nextInput = document.getElementById(`input-${currentIndex + 1}`);
             if (nextInput && !nextInput.disabled) {
@@ -990,8 +990,8 @@
             return new Intl.NumberFormat('ko-KR').format(num) + '원';
         }
 
-        function updateMoneyUI() { 
-            dom.money.textContent = formatCurrency(state.money); 
+        function updateMoneyUI() {
+            dom.money.textContent = formatCurrency(state.money);
         }
 
         function updateProgressUI() {
@@ -1010,7 +1010,7 @@
             const newWidth = Math.max(config.INPUT_MIN_WIDTH, Math.min(desiredWidth, availableWidth - 4));
             input.style.width = newWidth + 'px';
         }
-        
+
         function showMoneyUpAnimation(target, text) {
             const el = document.createElement('div');
             el.className = 'score-up-animation text-yellow-400';
@@ -1094,7 +1094,7 @@ function setCharExpression(type) {
         expressionTimeout = setTimeout(() => setCharExpression('idle'), 1500);
     }
 }
-        
+
         function populateCategoriesForRandomMode() {
             dom.categorySelect.innerHTML = ''; // Clear previous options
 
@@ -1136,7 +1136,7 @@ function setCharExpression(type) {
                 const status = state.completionStatus[index] || 'unlocked';
                 const iconContainer = document.createElement('div');
                 iconContainer.className = 'star-container';
-                
+
                 const isChongron = quizSet.category.startsWith('총론');
                 iconContainer.innerHTML = isChongron ? STAR_SVG_TEMPLATE : SPARKLE_SVG_TEMPLATE;
                 const svg = iconContainer.querySelector('svg');
@@ -1152,7 +1152,7 @@ function setCharExpression(type) {
                 label.textContent = `${quizSet.category.split(' | ')[1]} (${questionCount}개)`;
 
                 iconContainer.appendChild(label);
-                
+
                 iconContainer.addEventListener('click', () => {
                     const questionsToLoad = allQuizzes[index].questions.map(q => ({ ...q, originalCategory: q.detailedCategory, originalIndex: index }));
                     startQuiz(questionsToLoad, 'sequential', index);
@@ -1175,10 +1175,10 @@ function setCharExpression(type) {
                 dom.clearIncorrectNotesBtn.disabled = true;
                 return;
             }
-            
+
             dom.startIncorrectQuizBtn.disabled = false;
             dom.clearIncorrectNotesBtn.disabled = false;
-            
+
             const incorrectQuestions = [];
             allQuizzes.forEach(category => {
                 category.questions.forEach(q => {
@@ -1191,7 +1191,7 @@ function setCharExpression(type) {
             incorrectQuestions.forEach(note => {
                 const item = document.createElement('div');
                 item.className = 'incorrect-item';
-                
+
                 const category = document.createElement('div');
                 category.className = 'incorrect-item-category';
                 category.textContent = note.detailedCategory;
@@ -1205,7 +1205,7 @@ function setCharExpression(type) {
                 dom.incorrectListContainer.appendChild(item);
             });
         }
-        
+
         function updateIncorrectNoteButton() {
             const incorrectNotes = loadData('quizIncorrectNotes', []);
             dom.selectModeIncorrectBtn.disabled = incorrectNotes.length === 0;
@@ -1247,7 +1247,7 @@ function setCharExpression(type) {
             { label: '3문제 연속 성공 시 +50,000', color: '#F06292', type: 'streak', value: 50000, streak: 3, weight: 4, tier: 'B' },
         ];
         let isSpinning = false;
-        
+
         function setupSlotMachine(tier = 'C') {
             const reel = dom.reels[0];
             if (!reel) return;
@@ -1365,7 +1365,7 @@ function setCharExpression(type) {
             } else {
                  sounds.incorrect1.triggerAttackRelease('G2', '8n', Tone.now());
             }
-            
+
             switch(item.type) {
                 case 'add':
                     const addAmount = Math.floor(item.value * state.rouletteRewardMultiplier * TIER_REWARD_MULTIPLIER[state.currentRouletteTier]);
@@ -1426,14 +1426,14 @@ function setCharExpression(type) {
                     triggerScreenShake();
                     break;
             }
-            
+
             if (state.money < 0) state.money = 0;
-            
+
             dom.rouletteResult.textContent = resultText;
             updateMoneyUI();
             saveData('money', state.money);
         }
-        
+
         function showJackpotEffect() {
             const overlay = document.createElement('div');
             overlay.className = 'jackpot-overlay';
@@ -1569,7 +1569,7 @@ function setCharExpression(type) {
             renderKnowledgeMap();
             updateIncorrectNoteButton();
             updateMoneyUI();
-            
+
             const allButtons = document.querySelectorAll('button');
             allButtons.forEach(button => {
                 button.addEventListener('click', async () => {
@@ -1607,7 +1607,7 @@ function setCharExpression(type) {
                 dom.step2ScopeSelection.classList.add('hidden');
                 dom.step1ModeSelection.classList.remove('hidden');
             });
-            
+
             dom.backToMainFromIncorrectBtn.addEventListener('click', returnToMainMenu);
 
             dom.startBtn.addEventListener('click', () => {
