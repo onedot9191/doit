@@ -98,9 +98,13 @@
             height: 3rem;
             transition: all 0.3s;
         }
-        .knowledge-icon-svg.unlocked path { fill: #6b7280; }
-        .knowledge-icon-svg.completed path { fill: #3b82f6; filter: drop-shadow(0 0 6px #3b82f6); }
-        .knowledge-icon-svg.perfect path { fill: #facc15; filter: drop-shadow(0 0 10px #facc15); }
+        .knowledge-icon-svg path { fill: var(--star-color, #6b7280); }
+        .knowledge-icon-svg.completed path {
+            filter: drop-shadow(0 0 6px var(--star-color, #3b82f6));
+        }
+        .knowledge-icon-svg.perfect path {
+            filter: drop-shadow(0 0 10px var(--star-color, #facc15));
+        }
 
         .star-label { font-size: 0.8rem; text-align: center; margin-top: 0.5rem; color: #d1d5db; word-break: keep-all; }
         
@@ -397,6 +401,10 @@
 
         const STAR_SVG_TEMPLATE = `<svg class="knowledge-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z"/></svg>`;
         const SPARKLE_SVG_TEMPLATE = `<svg class="knowledge-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L9.5 9.5L2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z"/></svg>`;
+        const STAR_COLORS = [
+            '#F87171', '#FBBF24', '#34D399', '#60A5FA',
+            '#A78BFA', '#F472B6', '#FCD34D', '#4ADE80'
+        ];
         // 전체 171개 문항 데이터는 data/quizzes.json에서 불러옵니다.
         let allQuizzes = [];
         
@@ -1102,7 +1110,10 @@ function setCharExpression(type) {
                 
                 const isChongron = quizSet.category.startsWith('총론');
                 iconContainer.innerHTML = isChongron ? STAR_SVG_TEMPLATE : SPARKLE_SVG_TEMPLATE;
-                iconContainer.querySelector('svg').classList.add(status);
+                const svg = iconContainer.querySelector('svg');
+                svg.classList.add(status);
+                const color = STAR_COLORS[index % STAR_COLORS.length];
+                svg.style.setProperty('--star-color', color);
 
                 const label = document.createElement('div');
                 label.className = 'star-label';
