@@ -41,12 +41,12 @@
         @keyframes score-up { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-30px) scale(1.5); opacity: 0; } }
         .score-up-animation { position: absolute; font-weight: bold; animation: score-up 0.8s ease-out; pointer-events: none; }
 
-        /* --- Cat walk animation --- */
-        @keyframes cat-walk-right { from { left: -10%; } to { left: 110%; } }
-        @keyframes cat-walk-left { from { left: 110%; transform: scaleX(-1); } to { left: -10%; transform: scaleX(-1); } }
-        .cat { position: fixed; bottom: 10%; font-size: 3rem; pointer-events: none; z-index: 50; }
-        .cat-right { animation: cat-walk-right 6s linear forwards; }
-        .cat-left { animation: cat-walk-left 6s linear forwards; }
+        /* --- Animal walk animation --- */
+        @keyframes animal-walk-right { from { left: -10%; } to { left: 110%; } }
+        @keyframes animal-walk-left { from { left: 110%; transform: scaleX(-1); } to { left: -10%; transform: scaleX(-1); } }
+        .animal { position: fixed; bottom: 10%; font-size: 3rem; pointer-events: none; z-index: 50; }
+        .animal-right { animation: animal-walk-right 6s linear forwards; }
+        .animal-left { animation: animal-walk-left 6s linear forwards; }
 
         @keyframes perfect-pop { 0% { transform: scale(0.5); opacity: 0; } 60% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes perfect-fade-out { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
@@ -798,7 +798,7 @@
         
         function handleCorrectAnswer(input) {
             setCharExpression('happy');
-            spawnCat();
+            spawnAnimal();
 
             sounds.coin.triggerAttackRelease('B5', '16n', Tone.now());
             
@@ -1024,16 +1024,16 @@
             }, 2000);
         }
 
-        function spawnCat() {
-            const cats = ['🐱','😺','😸','😹','😻','😼','😽'];
-            const catEl = document.createElement('div');
-            catEl.className = 'cat';
-            catEl.textContent = cats[Math.floor(Math.random() * cats.length)];
+        function spawnAnimal() {
+            const animals = ['🐱','🐶','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐵'];
+            const animalEl = document.createElement('div');
+            animalEl.className = 'animal';
+            animalEl.textContent = animals[Math.floor(Math.random() * animals.length)];
             const dirRight = Math.random() < 0.5;
-            catEl.classList.add(dirRight ? 'cat-right' : 'cat-left');
-            catEl.style.bottom = (Math.random() * 20 + 5) + '%';
-            document.body.appendChild(catEl);
-            catEl.addEventListener('animationend', () => catEl.remove());
+            animalEl.classList.add(dirRight ? 'animal-right' : 'animal-left');
+            animalEl.style.bottom = (Math.random() * 20 + 5) + '%';
+            document.body.appendChild(animalEl);
+            animalEl.addEventListener('animationend', () => animalEl.remove());
         }
 
         // =================================================================
