@@ -256,6 +256,19 @@
             text-shadow: 0 0 20px white, 0 0 40px #ffc107;
             animation: perfect-pop 1s ease-out;
         }
+        .roulette-tier-c #slot-machine {
+            border-color: #cd7f32;
+        }
+        .roulette-tier-b #slot-machine {
+            border-color: #c0c0c0;
+        }
+        .roulette-tier-a #slot-machine {
+            border-color: #ffd700;
+        }
+        .roulette-tier-s #slot-machine {
+            border-color: transparent;
+            border-image: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet) 1;
+        }
     </style>
 </head>
 <body class="w-screen h-screen flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto">
@@ -399,6 +412,10 @@
             ROULETTE_CHANCE: 0.25, // 25%
         };
 
+        // Tier multipliers for rewards and jackpot probability
+        const TIER_REWARD_MULTIPLIER = { C: 1, B: 1.5, A: 2, S: 3 };
+        const TIER_JACKPOT_CHANCE = { C: 0.01, B: 0.03, A: 0.05, S: 0.07 };
+
         const STAR_SVG_TEMPLATE = `<svg class="knowledge-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27z"/></svg>`;
         const SPARKLE_SVG_TEMPLATE = `<svg class="knowledge-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L9.5 9.5L2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z"/></svg>`;
         const STAR_COLORS = [
@@ -502,6 +519,10 @@
             state.jackpotChanceBoost = state.jackpotChanceBoost || 0;
             state.jackpotBoostTurnsLeft = state.jackpotBoostTurnsLeft || 0;
             state.streakBonus = state.streakBonus || null;
+            state.answerRewardBonus = state.answerRewardBonus || 0;
+            state.rouletteRewardMultiplier = state.rouletteRewardMultiplier || 1;
+            state.jackpotChancePermanentBoost = state.jackpotChancePermanentBoost || 0;
+            state.currentRouletteTier = state.currentRouletteTier || 'C';
         }
 
         function initializeGlobalState() {
@@ -520,6 +541,10 @@
                 jackpotChanceBoost: 0,
                 jackpotBoostTurnsLeft: 0,
                 streakBonus: null,
+                answerRewardBonus: 0,
+                rouletteRewardMultiplier: 1,
+                jackpotChancePermanentBoost: 0,
+                currentRouletteTier: 'C',
                 ...state // 기존 상태 유지
             };
             saveData('money', 0);
@@ -818,10 +843,11 @@
             input.disabled = true;
 
             if (!state.incorrectAttempts[index] || state.incorrectAttempts[index] < 2) {
-                let earnings = Math.floor(Math.random() * 9001) + 1000; // 1,000 ~ 10,000
+                let earnings = Math.floor(Math.random() * 9001) + 1000 + state.answerRewardBonus; // 기본 보상 + 보너스
                 if (state.multiplierTurnsLeft > 0) {
                     earnings *= state.moneyMultiplier;
                 }
+                earnings = Math.floor(earnings);
                 
                 state.money += earnings;
                 saveData('money', state.money);
@@ -1197,32 +1223,36 @@ function setCharExpression(type) {
         // --- 룰렛 로직 (Roulette Logic) ---
         // =================================================================
         const rouletteItems = [
-            { label: '+20,000', color: '#4CAF50', type: 'add', value: 20000, weight: 20 },
-            { label: '꽝', color: '#757575', type: 'dud', value: 0, weight: 18 },
-            { label: '+50,000', color: '#81C784', type: 'add', value: 50000, weight: 15 },
-            { label: '-30,000', color: '#E57373', type: 'add', value: -30000, weight: 7 },
-            { label: '자산 +20%', color: '#64B5F6', type: 'percent', value: 0.20, weight: 7 },
-            { label: '자산 -20%', color: '#EF5350', type: 'percent', value: -0.20, weight: 7 },
-            { label: '+150,000', color: '#AED581', type: 'add', value: 150000, weight: 4 },
-            { label: '+200,000', color: '#C5E1A5', type: 'add', value: 200000, weight: 2 },
-            { label: '2배 (3문제)', color: '#FFB74D', type: 'multiplier', value: 2, turns: 3, weight: 3 },
-            { label: '자산 +50%', color: '#4FC3F7', type: 'percent', value: 0.50, weight: 3 },
-            { label: '자산 +100%', color: '#FFD54F', type: 'percent', value: 1.00, weight: 2 },
-            { label: 'JACKPOT!', color: '#FFEE58', type: 'add', value: 1000000, weight: 1 },
-            { label: '다음 CHANCE 2배', color: '#BA68C8', type: 'chanceBoost', value: 2, turns: 1, weight: 3 },
-            { label: 'JACKPOT 확률 +5%', color: '#9575CD', type: 'jackpotBoost', value: 0.05, turns: 1, weight: 2 },
-            { label: '3문제 연속 성공 시 +50,000', color: '#F06292', type: 'streak', value: 50000, streak: 3, weight: 4 },
-            { label: '보상 선택', color: '#D1C4E9', type: 'choice', weight: 10 },
+            { label: '+50,000', color: '#4CAF50', type: 'add', value: 50000, weight: 20, tier: 'C' },
+            { label: '꽝', color: '#757575', type: 'dud', value: 0, weight: 18, tier: 'C' },
+            { label: '+100,000', color: '#81C784', type: 'add', value: 100000, weight: 15, tier: 'B' },
+            { label: '-30,000', color: '#E57373', type: 'add', value: -30000, weight: 7, tier: 'C' },
+            { label: '자산 +20%', color: '#64B5F6', type: 'percent', value: 0.20, weight: 7, tier: 'B' },
+            { label: '자산 -20%', color: '#EF5350', type: 'percent', value: -0.20, weight: 7, tier: 'C' },
+            { label: '정답 상금 +1,000', color: '#AED581', type: 'answerBonus', value: 1000, weight: 4, tier: 'C' },
+            { label: '룰렛 보상 +10%', color: '#C5E1A5', type: 'rouletteBonus', value: 0.10, weight: 2, tier: 'C' },
+            { label: '2배 (3문제)', color: '#FFB74D', type: 'multiplier', value: 2, turns: 3, weight: 3, tier: 'B' },
+            { label: '자산 +50%', color: '#4FC3F7', type: 'percent', value: 0.50, weight: 3, tier: 'A' },
+            { label: '자산 +100%', color: '#FFD54F', type: 'percent', value: 1.00, weight: 2, tier: 'A' },
+            { label: '+300,000', color: '#AED581', type: 'add', value: 300000, weight: 3, tier: 'A' },
+            { label: '+500,000', color: '#FFE082', type: 'add', value: 500000, weight: 2, tier: 'S' },
+            { label: 'JACKPOT!', color: '#FFEE58', type: 'add', value: 100000000, weight: 1, tier: 'C' },
+            { label: 'JACKPOT!', color: '#FFEE58', type: 'add', value: 100000000, weight: 1, tier: 'B' },
+            { label: 'JACKPOT!', color: '#FFEE58', type: 'add', value: 100000000, weight: 1, tier: 'A' },
+            { label: 'JACKPOT!', color: '#FFEE58', type: 'add', value: 100000000, weight: 1, tier: 'S' },
+            { label: 'JACKPOT 확률 +0.5%', color: '#9575CD', type: 'permJackpotBoost', value: 0.005, weight: 2, tier: 'B' },
+            { label: '3문제 연속 성공 시 +50,000', color: '#F06292', type: 'streak', value: 50000, streak: 3, weight: 4, tier: 'B' },
         ];
         let isSpinning = false;
         
-        function setupSlotMachine() {
+        function setupSlotMachine(tier = 'C') {
             const reel = dom.reels[0];
             if (!reel) return;
             const strip = reel.querySelector('.reel-strip');
             if (!strip) return;
             strip.innerHTML = '';
-            const items = [...rouletteItems, ...rouletteItems, ...rouletteItems];
+            const filtered = rouletteItems.filter(i => i.tier === tier);
+            const items = [...filtered, ...filtered, ...filtered];
 
             items.forEach(item => {
                 const itemEl = document.createElement('div');
@@ -1242,11 +1272,18 @@ function setCharExpression(type) {
             dom.spinBtn.classList.remove('can-spin');
             dom.rouletteResult.textContent = '';
 
-            let items = rouletteItems.map(i => ({...i}));
-            if (state.jackpotChanceBoost > 0 && state.jackpotBoostTurnsLeft > 0) {
-                const baseTotal = items.reduce((s, it) => s + it.weight, 0);
-                const jackpot = items.find(it => it.label === 'JACKPOT!');
-                if (jackpot) jackpot.weight += baseTotal * state.jackpotChanceBoost;
+            const filtered = rouletteItems.filter(i => i.tier === state.currentRouletteTier);
+            let items = filtered.map(i => ({ ...i }));
+
+            const jackpot = items.find(it => it.label === 'JACKPOT!');
+            const othersTotal = items.reduce((s, it) => s + (it === jackpot ? 0 : it.weight), 0);
+            if (jackpot) {
+                let chance = TIER_JACKPOT_CHANCE[state.currentRouletteTier] || 0.01;
+                if (state.jackpotChanceBoost > 0 && state.jackpotBoostTurnsLeft > 0) {
+                    chance += state.jackpotChanceBoost;
+                }
+                chance += state.jackpotChancePermanentBoost;
+                jackpot.weight = othersTotal * chance;
             }
             const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
             let randomWeight = Math.random() * totalWeight;
@@ -1267,8 +1304,8 @@ function setCharExpression(type) {
             strip.style.transition = 'none';
             strip.style.transform = 'translateY(0)';
             
-            const resultIndex = rouletteItems.findIndex(item => item.label === resultItem.label);
-            const targetIndex = rouletteItems.length + (resultIndex === -1 ? 0 : resultIndex);
+            const resultIndex = filtered.findIndex(item => item.label === resultItem.label);
+            const targetIndex = filtered.length + (resultIndex === -1 ? 0 : resultIndex);
 
             setTimeout(() => {
                 const spinDuration = 1.0; // seconds
@@ -1323,13 +1360,14 @@ function setCharExpression(type) {
             
             switch(item.type) {
                 case 'add':
-                    state.money += item.value;
-                    resultText = `${formatCurrency(item.value)} ${item.value >= 0 ? '획득!' : '잃음...'}`;
+                    const addAmount = Math.floor(item.value * state.rouletteRewardMultiplier * TIER_REWARD_MULTIPLIER[state.currentRouletteTier]);
+                    state.money += addAmount;
+                    resultText = `${formatCurrency(addAmount)} ${addAmount >= 0 ? '획득!' : '잃음...'}`;
                     if (item.value >= 150000) triggerConfetti();
                     if (item.value < 0) triggerScreenShake();
                     break;
                 case 'percent':
-                    const change = Math.floor(state.money * item.value);
+                    const change = Math.floor(state.money * item.value * state.rouletteRewardMultiplier * TIER_REWARD_MULTIPLIER[state.currentRouletteTier]);
                     state.money += change;
                     resultText = `자산 ${item.value > 0 ? '+' : ''}${item.value * 100}% (${formatCurrency(change)})`;
                     if (item.value >= 0.5) triggerConfetti();
@@ -1341,18 +1379,36 @@ function setCharExpression(type) {
                     resultText = `${item.turns}문제 동안 획득 자산 ${item.value}배!`;
                     break;
                 case 'chanceBoost':
-                    state.rouletteChanceMultiplier = item.value;
+                    const cb = item.value * TIER_REWARD_MULTIPLIER[state.currentRouletteTier];
+                    state.rouletteChanceMultiplier = cb;
                     state.rouletteChanceTurnsLeft = item.turns;
-                    resultText = `다음 CHANCE 확률 ${item.value}배!`;
+                    resultText = `다음 CHANCE 확률 ${cb}배!`;
                     break;
                 case 'jackpotBoost':
-                    state.jackpotChanceBoost = item.value;
+                    const jb = item.value * TIER_REWARD_MULTIPLIER[state.currentRouletteTier];
+                    state.jackpotChanceBoost = jb;
                     state.jackpotBoostTurnsLeft = item.turns;
-                    resultText = `다음 SPIN JACKPOT 확률 +${item.value * 100}%`;
+                    resultText = `다음 SPIN JACKPOT 확률 +${jb * 100}%`;
+                    break;
+                case 'answerBonus':
+                    const bonusInc = Math.floor(item.value * TIER_REWARD_MULTIPLIER[state.currentRouletteTier]);
+                    state.answerRewardBonus += bonusInc;
+                    resultText = `정답 상금 +${formatCurrency(bonusInc)} 증가!`;
+                    break;
+                case 'rouletteBonus':
+                    const rb = item.value * TIER_REWARD_MULTIPLIER[state.currentRouletteTier];
+                    state.rouletteRewardMultiplier += rb;
+                    resultText = `룰렛 보상 금액 +${rb * 100}%`;
+                    break;
+                case 'permJackpotBoost':
+                    const pjb = item.value * TIER_REWARD_MULTIPLIER[state.currentRouletteTier];
+                    state.jackpotChancePermanentBoost += pjb;
+                    resultText = `잭팟 확률 +${pjb * 100}%`;
                     break;
                 case 'streak':
-                    state.streakBonus = { remaining: item.streak, reward: item.value, streak: item.streak };
-                    resultText = `다음 ${item.streak}문제 연속 성공 시 ${formatCurrency(item.value)}!`;
+                    const streakReward = Math.floor(item.value * TIER_REWARD_MULTIPLIER[state.currentRouletteTier]);
+                    state.streakBonus = { remaining: item.streak, reward: streakReward, streak: item.streak };
+                    resultText = `다음 ${item.streak}문제 연속 성공 시 ${formatCurrency(streakReward)}!`;
                     break;
                 case 'choice':
                     showChoiceModal();
@@ -1375,23 +1431,62 @@ function setCharExpression(type) {
             overlay.className = 'jackpot-overlay';
             const text = document.createElement('div');
             text.className = 'jackpot-text';
-            text.textContent = 'JACKPOT!';
+            text.textContent = 'JACKPOT! +100,000,000원';
             overlay.appendChild(text);
             document.body.appendChild(overlay);
             setTimeout(() => overlay.remove(), 2000);
         }
 
+        function determineRouletteTier() {
+            const r = Math.random();
+            if (r < 0.05) return 'S';
+            if (r < 0.15) return 'A';
+            if (r < 0.45) return 'B';
+            return 'C';
+        }
+
+        function applyRouletteTierClass() {
+            dom.rouletteScreen.classList.remove('roulette-tier-c','roulette-tier-b','roulette-tier-a','roulette-tier-s');
+            dom.rouletteScreen.classList.add('roulette-tier-' + state.currentRouletteTier.toLowerCase());
+        }
+
+        function animateRouletteUpgrade(target) {
+            const tiers = ['C','B','A','S'];
+            let currentIndex = tiers.indexOf(state.currentRouletteTier);
+            const targetIndex = tiers.indexOf(target);
+            function step() {
+                if (currentIndex >= targetIndex) {
+                    dom.spinBtn.disabled = false;
+                    dom.spinBtn.classList.add('can-spin');
+                    return;
+                }
+                currentIndex++;
+                state.currentRouletteTier = tiers[currentIndex];
+                applyRouletteTierClass();
+                setupSlotMachine(state.currentRouletteTier);
+                sounds.win.triggerAttackRelease(['C5','E5','G5'], '8n', Tone.now());
+                setTimeout(step, 600);
+            }
+            step();
+        }
+
         function showRoulette() {
             dom.rouletteScreen.classList.remove('hidden');
             dom.rouletteScreen.classList.add('flex');
-            setupSlotMachine();
-            dom.spinBtn.disabled = false;
-            dom.spinBtn.classList.add('can-spin');
+            state.currentRouletteTier = 'C';
+            applyRouletteTierClass();
+            setupSlotMachine('C');
+            dom.spinBtn.disabled = true;
+            dom.spinBtn.classList.remove('can-spin');
+            const target = determineRouletteTier();
+            animateRouletteUpgrade(target);
         }
 
         function hideRoulette() {
             dom.rouletteScreen.classList.add('hidden');
             dom.rouletteScreen.classList.remove('flex');
+            dom.rouletteScreen.classList.remove('roulette-tier-c','roulette-tier-b','roulette-tier-a','roulette-tier-s');
+            state.currentRouletteTier = 'C';
             dom.nextBtn.classList.remove('hidden');
             dom.nextBtn.focus();
         }
