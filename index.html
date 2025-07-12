@@ -512,7 +512,6 @@
             state.moneyMultiplier = state.moneyMultiplier || 1;
             state.multiplierTurnsLeft = state.multiplierTurnsLeft || 0;
             state.initialQuizCount = 0;
-            state.correctlyAnsweredCount = 0;
             state.countedCorrectQIDs = new Set();
             state.reviewScheduledQIDs = new Set();
             state.rouletteChanceMultiplier = state.rouletteChanceMultiplier || 1;
@@ -881,7 +880,6 @@
                     if (!state.countedCorrectQIDs.has(quiz.qid)) {
                         state.countedCorrectQIDs.add(quiz.qid);
                     }
-                    state.correctlyAnsweredCount++;
                     updateProgressUI();
                     
                     const perfectNotes = ['C5', 'E5', 'G5', 'C6'];
@@ -930,6 +928,10 @@
                     }, 800);
                 } else {
                     state.questionPerfectStatus[state.currentQuizIndex] = false;
+                    if (!state.countedCorrectQIDs.has(quiz.qid)) {
+                        state.countedCorrectQIDs.add(quiz.qid);
+                    }
+                    updateProgressUI();
 
                     if (state.streakBonus) {
                         state.streakBonus = null;
@@ -995,7 +997,7 @@
         function updateProgressUI() {
             const progressPercent = state.initialQuizCount > 0 ? (state.countedCorrectQIDs.size / state.initialQuizCount) * 100 : 0;
             dom.progressBar.style.width = `${Math.min(progressPercent, 100)}%`;
-            dom.currentQ.textContent = state.correctlyAnsweredCount;
+            dom.currentQ.textContent = state.countedCorrectQIDs.size;
         }
 
         function updateInputWidth(input) {
