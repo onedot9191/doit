@@ -245,19 +245,6 @@
             text-shadow: 0 0 20px white, 0 0 40px #ffc107;
             animation: perfect-pop 1s ease-out;
         }
-
-        .cat {
-            position: fixed;
-            bottom: 20px;
-            left: -100px;
-            font-size: 3rem;
-            pointer-events: none;
-            z-index: 100;
-        }
-        @keyframes cat-walk {
-            from { transform: translateX(-100px); }
-            to { transform: translateX(calc(100vw + 100px)); }
-        }
     </style>
 </head>
 <body class="w-screen h-screen flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto">
@@ -842,7 +829,6 @@
         function checkAllAnswered() {
             const allDisabled = Array.from(dom.questionContainer.querySelectorAll('.quiz-input')).every(i => i.disabled);
             if (allDisabled) {
-                triggerCat();
                 const quiz = state.activeQuizzes[state.currentQuizIndex];
                 
                 const hasSecondWrong = Object.values(state.incorrectAttempts).some(v => v >= 2);
@@ -1018,17 +1004,6 @@
         function triggerScreenShake() {
             document.body.classList.add("shake");
             setTimeout(() => document.body.classList.remove("shake"), 500);
-        }
-
-        function triggerCat() {
-            const cat = document.createElement('div');
-            cat.className = 'cat';
-            cat.textContent = '🐱';
-            document.body.appendChild(cat);
-            cat.animate([
-                { transform: 'translateX(-100px)' },
-                { transform: `translateX(${window.innerWidth + 100}px)` }
-            ], { duration: 3000, easing: 'linear' }).onfinish = () => cat.remove();
         }
         function showToast(message) {
             const toast = dom.reviewToast;
