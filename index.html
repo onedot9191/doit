@@ -1113,7 +1113,9 @@ function setCharExpression(type) {
                 const svg = iconContainer.querySelector('svg');
                 svg.classList.add(status);
                 const color = STAR_COLORS[index % STAR_COLORS.length];
-                svg.style.setProperty('--star-color', color);
+                if (status === 'completed' || status === 'perfect') {
+                    svg.style.setProperty('--star-color', color);
+                }
 
                 const label = document.createElement('div');
                 label.className = 'star-label';
