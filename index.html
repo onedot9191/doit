@@ -220,6 +220,30 @@
             transform: scale(1.15);
             box-shadow: 0 0 25px gold, inset 0 0 10px rgba(255,255,255,0.5);
             z-index: 10;
+            animation: active-flash 1s infinite;
+        }
+
+        @keyframes active-flash {
+            0%, 100% { box-shadow: 0 0 25px gold, inset 0 0 10px rgba(255,255,255,0.5); }
+            50% { box-shadow: 0 0 35px #fff, inset 0 0 15px rgba(255,255,255,0.8); }
+        }
+
+        @keyframes hue-spin {
+            from { filter: hue-rotate(0deg); }
+            to { filter: hue-rotate(360deg); }
+        }
+        .reel-strip.spinning {
+            animation: hue-spin 1s linear infinite;
+        }
+
+        @keyframes btn-bounce { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        #spin-btn.spin-feedback {
+            animation: btn-bounce 0.3s ease;
+        }
+
+        @keyframes result-pop { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        #roulette-result.show {
+            animation: result-pop 0.5s ease-out;
         }
 
         @keyframes flash {
@@ -490,6 +514,16 @@
                 envelope: { attack: 0.01, decay: 0.4, sustain: 0, release: 0.4 },
                 filterEnvelope: { attack: 0.01, decay: 0.1, sustain: 0, baseFrequency: 200, octaves: -2 },
                 volume: -15
+            }).toDestination(),
+            rouletteStart: new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 },
+                volume: -10
+            }).toDestination(),
+            rouletteEnd: new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.01, decay: 0.3, sustain: 0, release: 0.2 },
+                volume: -10
             }).toDestination()
         };
 
@@ -1283,7 +1317,16 @@ function setCharExpression(type) {
             isSpinning = true;
             dom.spinBtn.disabled = true;
             dom.spinBtn.classList.remove('can-spin');
+            dom.spinBtn.classList.add('spin-feedback');
+            setTimeout(() => dom.spinBtn.classList.remove('spin-feedback'), 300);
             dom.rouletteResult.textContent = '';
+            dom.rouletteResult.classList.remove('show');
+            const reel = dom.reels[0];
+            if (reel) {
+                const strip = reel.querySelector('.reel-strip');
+                if (strip) strip.classList.add('spinning');
+            }
+            sounds.rouletteStart.triggerAttackRelease('C4', '8n', Tone.now());
 
             const target = determineUpgradeTarget();
             animateRouletteUpgrade(target, performSpin);
@@ -1339,6 +1382,12 @@ function setCharExpression(type) {
                 setTimeout(() => {
                     isSpinning = false;
                     clearInterval(clickInterval);
+                    const reel = dom.reels[0];
+                    if (reel) {
+                        const strip = reel.querySelector('.reel-strip');
+                        if (strip) strip.classList.remove('spinning');
+                    }
+                    sounds.rouletteEnd.triggerAttackRelease('G4', '8n', Tone.now());
                     const autoHide = applyRouletteResult(resultItem, targetIndex);
                     if (state.jackpotBoostTurnsLeft > 0) {
                         state.jackpotBoostTurnsLeft--;
@@ -1442,6 +1491,8 @@ function setCharExpression(type) {
             if (state.money < 0) state.money = 0;
 
             dom.rouletteResult.textContent = resultText;
+            dom.rouletteResult.classList.add('show');
+            setTimeout(() => dom.rouletteResult.classList.remove('show'), 500);
             updateMoneyUI();
             saveData('money', state.money);
         }
