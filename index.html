@@ -484,6 +484,12 @@
                 harmonicity: 6,
                 modulationIndex: 30,
                 volume: -15
+            }).toDestination(),
+            rouletteLose: new Tone.MonoSynth({
+                oscillator: { type: 'square' },
+                envelope: { attack: 0.01, decay: 0.4, sustain: 0, release: 0.4 },
+                filterEnvelope: { attack: 0.01, decay: 0.1, sustain: 0, baseFrequency: 200, octaves: -2 },
+                volume: -15
             }).toDestination()
         };
 
@@ -1364,10 +1370,12 @@ function setCharExpression(type) {
             if (item.label === 'JACKPOT!') {
                 showJackpotEffect();
                 sounds.jackpot.triggerAttackRelease(['C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'], '1s', Tone.now());
-            } else if ((item.type === 'add' && item.value > 0) || (item.type === 'percent' && item.value > 0) || item.type === 'multiplier') {
-                 sounds.win.triggerAttackRelease(['C5', 'E5', 'G5'], '8n', Tone.now());
+            } else if ((item.type === 'add' && item.value <= 0) ||
+                       (item.type === 'percent' && item.value <= 0) ||
+                       item.type === 'dud') {
+                sounds.rouletteLose.triggerAttackRelease('C2', '8n', Tone.now());
             } else {
-                 sounds.incorrect1.triggerAttackRelease('G2', '8n', Tone.now());
+                sounds.win.triggerAttackRelease(['C5', 'E5', 'G5'], '8n', Tone.now());
             }
 
             switch(item.type) {
