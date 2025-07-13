@@ -320,6 +320,7 @@
                     <button id="select-mode-sequential" class="mode-btn font-jua text-3xl px-10 py-4 rounded-full" data-mode="sequential">순서대로</button>
                     <button id="select-mode-random" class="mode-btn font-jua text-3xl px-10 py-4 rounded-full" data-mode="random">랜덤으로</button>
                     <button id="select-mode-incorrect" class="mode-btn font-jua text-3xl px-10 py-4 rounded-full" data-mode="incorrect">오답노트</button>
+                    <button id="open-pe-btn" class="mode-btn font-jua text-3xl px-10 py-4 rounded-full">신체활동 예시</button>
                 </div>
             </div>
 
@@ -368,6 +369,14 @@
                  <button id="start-incorrect-quiz-btn" class="font-jua text-2xl bg-blue-500 text-white px-8 py-3 rounded-full hover:bg-blue-600 transition-colors">오답 다시 풀기</button>
                  <button id="clear-incorrect-notes-btn" class="font-jua text-2xl bg-red-600 text-white px-8 py-3 rounded-full hover:bg-red-700 transition-colors">전체 삭제</button>
             </div>
+        </div>
+    </div>
+
+    <div id="pe-screen" class="absolute inset-0 bg-black/80 hidden flex-col items-center z-10 text-left p-4 overflow-y-auto">
+        <div class="w-full max-w-4xl relative">
+            <button id="back-to-main-from-pe" class="absolute top-4 left-4 font-jua text-xl bg-gray-600 px-4 py-2 rounded-full">&lt; 뒤로</button>
+            <h1 class="font-jua text-4xl sm:text-6xl my-8 text-center">체육 신체활동 예시</h1>
+            <div id="pe-content" class="text-lg leading-relaxed space-y-6"></div>
         </div>
     </div>
 
@@ -425,6 +434,160 @@
         ];
         // 전체 171개 문항 데이터는 data/quizzes.json에서 불러옵니다.
         let allQuizzes = [];
+
+        const PE_ACTIVITIES = [
+            {
+                main: '운동',
+                grades: [
+                    {
+                        grade: '3~4학년',
+                        details: [
+                            {
+                                name: '기본 체력운동',
+                                items: [
+                                    '체력운동 관련 기본 움직임 기술(걷기, 달리기, 매달리기, 버티기나 굽히기, 밀기, 당기기)',
+                                    '체력운동 기능(오래 달리거나 걷기, 팔굽혀펴기, 윗몸말아올리기, 왕복달리기)'
+                                ]
+                            },
+                            {
+                                name: '건강 운동 및 생활습관',
+                                items: [
+                                    '건강 생활 습관(자세, 체중 및 체형 관리, 위생, 식습관, 정서 관리 활동)',
+                                    '운동 생활 습관(맨손체조, 산책, 계단 오르기, 생활 주변 운동기구 활용하기)'
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        grade: '5~6학년',
+                        details: [
+                            {
+                                name: '건강 체력 및 운동 체력',
+                                items: [
+                                    '건강체력 관련 운동(근력, 근지구력, 심폐지구력, 유연성 운동)',
+                                    '운동체력 관련 운동(순발력, 민첩성, 평형성, 협응성 운동)'
+                                ]
+                            },
+                            {
+                                name: '성장 및 안전 활동',
+                                items: [
+                                    '성장 관련 활동(신체 변화 및 제2차 성징 이해 활동, 감정 수용 및 조절 활동, 관계 형성 활동, 성 건강 활동)',
+                                    '안전 활동(운동 관련 안전사고 예방 및 대처 활동, 생활 안전사고 예방 및 대처 활동, 자연환경 변화 대처 활동)'
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                main: '스포츠',
+                grades: [
+                    {
+                        grade: '3~4학년',
+                        details: [
+                            {
+                                name: '기본 움직임의 기초 기술',
+                                items: [
+                                    '이동 움직임(방향 전환 달리기, 뛰기, 구르기, 물에서 이동하기)',
+                                    '비이동 움직임(균형잡기, 구부리기, 회전하기, 물에 뜨기)',
+                                    '조작 움직임(던지기, 굴리기, 차기, 잡기, 치기, 튀기기, 몰기, 타기)'
+                                ]
+                            },
+                            {
+                                name: '스포츠 유형별 움직임 기술',
+                                items: [
+                                    '기술형 스포츠 유형별 움직임(앞뒤 구르기, 옆돌기, 전력 달리기, 헤엄치기, 발차기)',
+                                    '전략형 스포츠 유형별 움직임(공던지기와 잡기, 공몰기, 공차기와 멈추기, 공치기와 받기, 라켓으로 치기)',
+                                    '생태형 스포츠 유형별 움직임(균형 잡고 이동하기, 타고 버티기, 잡고 오르기)'
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        grade: '5~6학년',
+                        details: [
+                            {
+                                name: '기술형 스포츠 유형별 활동',
+                                items: [
+                                    '기록형(육상 활동, 경영 활동, 빙상 활동, 표적 활동)',
+                                    '동작형(매트 활동, 뜀틀 활동, 평균대 활동)',
+                                    '투기형(태권도 활동, 씨름 활동)'
+                                ]
+                            },
+                            {
+                                name: '전략형 스포츠 유형별 활동',
+                                items: [
+                                    '영역형(축구형 게임, 농구형 게임, 핸드볼형 게임, 럭비형 게임, 하키형 게임)',
+                                    '필드형(야구형 게임 등)',
+                                    '네트형(배구형 게임, 배드민턴형 게임, 족구형 게임, 탁구형 게임, 테니스형 게임)'
+                                ]
+                            },
+                            {
+                                name: '생태형 스포츠 유형별 활동',
+                                items: [
+                                    '생활환경형(골프형 활동, 플라잉디스크형 활동, 자전거타기형 활동, 인라인스케이팅 활동, 스포츠클라이밍 활동, 민속놀이)',
+                                    '자연환경형(오리엔티어링, 등산 활동, 캠핑 활동, 수상 활동, 설상 활동, 승마 활동)'
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                main: '표현',
+                grades: [
+                    {
+                        grade: '3~4학년',
+                        details: [
+                            {
+                                name: '기본 움직임의 기초 표현',
+                                items: [
+                                    '이동 움직임 표현(워킹, 점핑, 호핑, 스키핑, 갤러핑, 리핑, 슬라이딩)',
+                                    '비이동 움직임 표현(펴기, 접기, 비틀기, 제자리 돌기, 털기, 흔들기)',
+                                    '조작 움직임 표현(들기, 돌리기)'
+                                ]
+                            },
+                            {
+                                name: '기본 움직임의 표현 방법',
+                                items: [
+                                    '추상 표현(언어 표현, 느낌이나 생각 표현하기)',
+                                    '모방 표현(사물 표현, 인물 표현, 자연 현상 표현하기)',
+                                    '리듬 표현(박자, 강약, 빠르기, 패턴에 따라 표현하기)',
+                                    '도구 표현(줄, 공, 천, 훌라후프 등 활용)'
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        grade: '5~6학년',
+                        details: [
+                            {
+                                name: '스포츠 표현 활동',
+                                items: [
+                                    '창작체조 활동',
+                                    '음악줄넘기 활동'
+                                ]
+                            },
+                            {
+                                name: '전통 표현 활동',
+                                items: [
+                                    '우리나라의 민속무용 활동',
+                                    '외국의 민속무용 활동'
+                                ]
+                            },
+                            {
+                                name: '현대 표현 활동',
+                                items: [
+                                    '라인댄스 활동',
+                                    '댄스스포츠 활동',
+                                    '스트리트댄스 활동'
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ];
 
 
         const sounds = {
@@ -658,6 +821,8 @@
             dom.endScreen.classList.add('hidden');
             dom.incorrectNoteScreen.classList.remove('flex');
             dom.incorrectNoteScreen.classList.add('hidden');
+            dom.peScreen.classList.remove('flex');
+            dom.peScreen.classList.add('hidden');
             dom.step2ScopeSelection.classList.add('hidden');
             dom.step1ModeSelection.classList.remove('hidden');
             dom.startScreen.classList.remove('hidden');
@@ -1230,6 +1395,45 @@ function setCharExpression(type) {
             showToast('지식 지도가 초기화되었습니다!');
         }
 
+        function renderPeActivities() {
+            dom.peContent.innerHTML = '';
+            PE_ACTIVITIES.forEach(cat => {
+                const catDiv = document.createElement('div');
+                const catTitle = document.createElement('h2');
+                catTitle.className = 'font-jua text-3xl text-blue-400 mb-4';
+                catTitle.textContent = cat.main;
+                catDiv.appendChild(catTitle);
+
+                cat.grades.forEach(gr => {
+                    const gradeDiv = document.createElement('div');
+                    gradeDiv.className = 'mb-4 ml-4';
+                    const gradeTitle = document.createElement('h3');
+                    gradeTitle.className = 'font-jua text-2xl text-green-400 mb-2';
+                    gradeTitle.textContent = gr.grade;
+                    gradeDiv.appendChild(gradeTitle);
+
+                    gr.details.forEach(d => {
+                        const detailTitle = document.createElement('div');
+                        detailTitle.className = 'font-bold ml-4';
+                        detailTitle.textContent = `[${d.name}]`;
+                        gradeDiv.appendChild(detailTitle);
+
+                        const ul = document.createElement('ul');
+                        ul.className = 'list-disc ml-8 mb-2';
+                        d.items.forEach(item => {
+                            const li = document.createElement('li');
+                            li.textContent = item;
+                            ul.appendChild(li);
+                        });
+                        gradeDiv.appendChild(ul);
+                    });
+                    catDiv.appendChild(gradeDiv);
+                });
+
+                dom.peContent.appendChild(catDiv);
+            });
+        }
+
         // plant system removed
 
         // =================================================================
@@ -1573,6 +1777,10 @@ function setCharExpression(type) {
                 choiceModal: document.getElementById('choice-modal'),
                 choiceMoney: document.getElementById('choice-money'),
                 choiceMultiplier: document.getElementById('choice-multiplier'),
+                openPEBtn: document.getElementById('open-pe-btn'),
+                peScreen: document.getElementById('pe-screen'),
+                backToMainFromPeBtn: document.getElementById('back-to-main-from-pe'),
+                peContent: document.getElementById('pe-content'),
             };
             const response = await fetch("data/quizzes.json");
             allQuizzes = await response.json();
@@ -1615,12 +1823,20 @@ function setCharExpression(type) {
                 dom.incorrectNoteScreen.classList.add('flex');
             });
 
+            dom.openPEBtn.addEventListener('click', () => {
+                renderPeActivities();
+                dom.startScreen.classList.add('hidden');
+                dom.peScreen.classList.remove('hidden');
+                dom.peScreen.classList.add('flex');
+            });
+
             dom.backToModeSelectionBtn.addEventListener('click', () => {
                 dom.step2ScopeSelection.classList.add('hidden');
                 dom.step1ModeSelection.classList.remove('hidden');
             });
 
             dom.backToMainFromIncorrectBtn.addEventListener('click', returnToMainMenu);
+            dom.backToMainFromPeBtn.addEventListener('click', returnToMainMenu);
 
             dom.startBtn.addEventListener('click', () => {
                 const selectedIndex = dom.categorySelect.value;
